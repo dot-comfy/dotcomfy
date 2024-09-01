@@ -61,6 +61,6 @@ func initConfig() {
 		fmt.Println(cfg)
 
 		// TODO: set this to ~/.dotcomfy
-		viper.AddConfigPath(cfg + "/dotcomfy")
+		viper.AddConfigPath(cfgFile)
 	}
 }

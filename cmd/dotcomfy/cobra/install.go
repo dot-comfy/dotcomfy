@@ -4,8 +4,10 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cobra
 
 import (
-	// "errors"
+	"dotcomfy/internal/config"
+	"dotcomfy/internal/services"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -18,9 +20,7 @@ var installCmd = &cobra.Command{
 	(which will look for the repository "https://github.com/{username}/dotfiles.git"),
 	or the full URL to a Git repo containing dotfiles`,
 	Args: cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("install called")
-	},
+	Run:  run,
 }
 
 func init() {
@@ -35,4 +35,26 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// installCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func run(cmd *cobra.Command, args []string) {
+	path := config.GetConfig().Foo
+
+	if path == "" {
+		tmp, err := os.MkdirTemp("", "dotcomfy-")
+		fmt.Println("install called")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: %+v\n", err.Error())
+			os.Exit(1)
+		}
+		defer func() {
+			os.RemoveAll(tmp)
+		}()
+		path = tmp
+	}
+
+	if err := services.CloneTo(args[0], path); err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: %+v\n", err)
+		os.Exit(1)
+	}
 }
