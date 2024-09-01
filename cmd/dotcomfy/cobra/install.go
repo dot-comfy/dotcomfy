@@ -47,9 +47,8 @@ func run(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(os.Stderr, "ERROR: %+v\n", err.Error())
 			os.Exit(1)
 		}
-		defer func() {
-			os.RemoveAll(tmp)
-		}()
+		defer os.RemoveAll(tmp)
+
 		path = tmp
 	}
 
