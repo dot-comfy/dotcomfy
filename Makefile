@@ -18,6 +18,6 @@ build:
 
 references:
 	./scripts/buildRefs.sh
-	@echo "Built References.md"
+	@echo "Built docs/REFERENCES.md"
 
 .PHONY: references

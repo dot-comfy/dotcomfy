@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Scrapes code looking for @REF tags and builds a bibliography of quoted code
 
-ref="References.md"
+ref="docs/REFERENCES.md"
 
 rm -f "${ref}"
 
