@@ -31,25 +31,24 @@ var installCmd = &cobra.Command{
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		dotcomfy_path := user.HomeDir + ".dotcomfy"
-		home_dir := user.HomeDir
+		dotcomfy_dir := user.HomeDir + ".dotcomfy"
+		// Default to home directory if not set
+		old_dotfiles_dir := user.HomeDir
 
 		if len(args) > 1 {
 			fmt.Println("Too many arguments")
 			os.Exit(1)
 		}
 
-		temp_dir, err := os.MkdirTemp("", "dotcomfy-clone")
+		os.MkdirAll(dotcomfy_dir, 0755)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "DEBUGPRINT[3]: install.go:63: err=%+v\n", err)
 			os.Exit(1)
 		}
 
-		defer os.RemoveAll(temp_dir)
-
 		if strings.Contains(args[0], "dotfiles.git") {
 			fmt.Println("Custom repo")
-			_, err = git.PlainClone(temp_dir, false, &git.CloneOptions{
+			_, err = git.PlainClone(dotcomfy_dir, false, &git.CloneOptions{
 				URL: args[0],
 			})
 
@@ -60,7 +59,7 @@ var installCmd = &cobra.Command{
 		} else {
 			fmt.Println("Username")
 			url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
-			_, err = git.PlainClone(temp_dir, false, &git.CloneOptions{
+			_, err = git.PlainClone(dotcomfy_dir, false, &git.CloneOptions{
 				URL: url,
 			})
 			fmt.Fprintf(os.Stderr, "DEBUGPRINT[4]: install.go:70: err=%+v\n", err)
@@ -72,7 +71,7 @@ var installCmd = &cobra.Command{
 		}
 
 		// Walk through the cloned repo and perform rename/symlink operations
-		err = filepath.WalkDir(dotcomfy_path, func(path string, d fs.DirEntry, err error) error {
+		err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "DEBUGPRINT[5]: install.go:84: err=%+v\n", err)
 				return err
@@ -81,10 +80,10 @@ var installCmd = &cobra.Command{
 			if !d.IsDir() {
 				if strings.Contains(path, ".git") {
 					fmt.Println("Skipping .git directory")
-				} else if strings.Contains(path, temp_dir+"README.md") {
+				} else if strings.Contains(path, dotcomfy_dir+"README.md") {
 					fmt.Println("Skipping root level README.md")
 				} else {
-
+					_ = rename_symlink_unix(old_dotfiles_dir, dotcomfy_dir, path)
 				}
 			}
 			return nil
@@ -92,9 +91,45 @@ var installCmd = &cobra.Command{
 	},
 }
 
-func rename_symlink_unix(old_dotfiles_path, dotcomfy_path, new_path string) string {
-	// TODO: implement this
-	return ""
+// TODO: write documentation
+func rename_symlink_unix(old_dotfiles_dir, dotcomfy_dir, new_path string) (string, error) {
+	// center_path represents the path of the directory entry
+	// with the dotcomfy_path prefix removed.
+	center_path := strings.TrimPrefix(new_path, dotcomfy_dir)
+	old_path := old_dotfiles_dir + center_path
+	// Want to check to see if new_entry has a corresponding entry
+	// in old_dotfiles_path. If so, rename corresponding entry to
+	// {corresponding_entry}.pre-dotcomfy, put new_entry symlink in its place.
+	_, err := os.Stat(old_path)
+	if err == nil {
+		new_path = new_path + ".pre-dotcomfy"
+		err = os.Rename(old_path, new_path)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT[6]: install.go:106: err=%+v\n", err)
+			return "", err
+		}
+		err = os.Symlink(new_path, old_path)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT[7]: install.go:111: err=%+v\n", err)
+			return "", err
+		}
+		return old_path, nil
+	} else if os.IsNotExist(err) {
+		err = os.MkdirAll(filepath.Dir(old_path), 0755)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT[8]: install.go:118: err=%+v\n", err)
+			return "", err
+		}
+		err = os.Symlink(new_path, old_path)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT[9]: install.go:123: err=%+v\n", err)
+			return "", err
+		}
+		return old_path, nil
+	} else {
+		fmt.Fprintf(os.Stderr, "DEBUGPRINT[10]: install.go:104: err=%+v\n", err)
+		return "", err
+	}
 }
 
 func init() {
