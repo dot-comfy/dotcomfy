@@ -1,7 +1,7 @@
 /*
 Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 */
-package cmd
+package cobra
 
 import (
 	// "errors"
@@ -24,71 +24,73 @@ var installCmd = &cobra.Command{
 	(which will look for the repository "https://github.com/{username}/dotfiles.git"),
 	or the full URL to a Git repo containing dotfiles`,
 	Args: cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("install called")
-		user, err := user.Current()
+	Run:  run,
+}
+
+func run(cmd *cobra.Command, args []string) {
+	fmt.Println("install called")
+	user, err := user.Current()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	dotcomfy_dir := user.HomeDir + ".dotcomfy"
+	// Default to home directory if not set
+	old_dotfiles_dir := user.HomeDir
+
+	if len(args) > 1 {
+		fmt.Println("Too many arguments")
+		os.Exit(1)
+	}
+
+	os.MkdirAll(dotcomfy_dir, 0755)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "DEBUGPRINT[3]: install.go:63: err=%+v\n", err)
+		os.Exit(1)
+	}
+
+	if strings.Contains(args[0], "dotfiles.git") {
+		fmt.Println("Custom repo")
+		_, err = git.PlainClone(dotcomfy_dir, false, &git.CloneOptions{
+			URL: args[0],
+		})
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT[2]: install.go:56: err=%+v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		fmt.Println("Username")
+		url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
+		_, err = git.PlainClone(dotcomfy_dir, false, &git.CloneOptions{
+			URL: url,
+		})
+		fmt.Fprintf(os.Stderr, "DEBUGPRINT[4]: install.go:70: err=%+v\n", err)
+
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		dotcomfy_dir := user.HomeDir + ".dotcomfy"
-		// Default to home directory if not set
-		old_dotfiles_dir := user.HomeDir
+	}
 
-		if len(args) > 1 {
-			fmt.Println("Too many arguments")
-			os.Exit(1)
-		}
-
-		os.MkdirAll(dotcomfy_dir, 0755)
+	// Walk through the cloned repo and perform rename/symlink operations
+	err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "DEBUGPRINT[3]: install.go:63: err=%+v\n", err)
-			os.Exit(1)
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT[5]: install.go:84: err=%+v\n", err)
+			return err
 		}
 
-		if strings.Contains(args[0], "dotfiles.git") {
-			fmt.Println("Custom repo")
-			_, err = git.PlainClone(dotcomfy_dir, false, &git.CloneOptions{
-				URL: args[0],
-			})
-
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "DEBUGPRINT[2]: install.go:56: err=%+v\n", err)
-				os.Exit(1)
-			}
-		} else {
-			fmt.Println("Username")
-			url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
-			_, err = git.PlainClone(dotcomfy_dir, false, &git.CloneOptions{
-				URL: url,
-			})
-			fmt.Fprintf(os.Stderr, "DEBUGPRINT[4]: install.go:70: err=%+v\n", err)
-
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+		if !d.IsDir() {
+			if strings.Contains(path, ".git") {
+				fmt.Println("Skipping .git directory")
+			} else if strings.Contains(path, dotcomfy_dir+"README.md") {
+				fmt.Println("Skipping root level README.md")
+			} else {
+				_, err = rename_symlink_unix(old_dotfiles_dir, dotcomfy_dir, path)
 			}
 		}
-
-		// Walk through the cloned repo and perform rename/symlink operations
-		err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "DEBUGPRINT[5]: install.go:84: err=%+v\n", err)
-				return err
-			}
-
-			if !d.IsDir() {
-				if strings.Contains(path, ".git") {
-					fmt.Println("Skipping .git directory")
-				} else if strings.Contains(path, dotcomfy_dir+"README.md") {
-					fmt.Println("Skipping root level README.md")
-				} else {
-					_ = rename_symlink_unix(old_dotfiles_dir, dotcomfy_dir, path)
-				}
-			}
-			return nil
-		})
-	},
+		return nil
+	})
 }
 
 // TODO: write documentation

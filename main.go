@@ -1,11 +1,10 @@
 /*
 Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-
 */
 package main
 
-import "dotcomfy/cmd"
+import "dotcomfy/cmd/dotcomfy/cobra"
 
 func main() {
-	cmd.Execute()
+	cobra.Execute()
 }

@@ -1,7 +1,7 @@
 /*
 Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 */
-package cmd
+package cobra
 
 import (
 	"os"
@@ -54,7 +54,11 @@ func initConfig() {
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 
-		// TODO: set this to ~/.dotcomfy
-		viper.AddConfigPath()
+		cfg, err := os.UserConfigDir()
+
+		viper.AddConfigPath(cfg + "/dotcomfy/")   // Config file can live in either $HOME/.config/dotcomfy/
+		viper.AddConfigPath(home + "/.dotcomfy/") // or $HOME/.dotcomfy/
+		viper.SetConfigName("config")
+		viper.SetConfigType("toml")
 	}
 }
