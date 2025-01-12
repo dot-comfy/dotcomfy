@@ -12,6 +12,7 @@ WORKDIR /home/comfy
 
 # Copy the binary into the container
 COPY --chown=comfy:comfy bin/dotcomfy bin/dotcomfy
+COPY --chown=comfy:comfy tests/scripts/* tests/scripts/
 
 # TODO: Copy test scenarios that are wrapped as bash scripts
 
