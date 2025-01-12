@@ -21,3 +21,18 @@ references:
 	@echo "Built docs/REFERENCES.md"
 
 .PHONY: references
+
+IMAGE_NAME := dotcomfy
+IMAGE_TAG := latest
+
+CONTAINER_RUNTIME := $(shell command -v podman >/dev/null 2>&1 && echo podman || echo docker)
+
+build-container:
+	$(CONTAINER_RUNTIME) build -t $(IMAGE_NAME):$(IMAGE_TAG) -f Containerfile
+
+.PHONY: build-container
+
+container: build-container
+	$(CONTAINER_RUNTIME) run --rm -it $(IMAGE_NAME):$(IMAGE_TAG)
+
+.PHONY: container

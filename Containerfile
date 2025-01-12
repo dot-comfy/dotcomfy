@@ -1,0 +1,20 @@
+FROM quay.io/fedora/fedora:41
+
+# Create a non-root user and group
+RUN groupadd -r comfy && useradd -r -g comfy -d /home/comfy comfy
+
+# Create and set up the work directory
+RUN mkdir -p /home/comfy && chown -R comfy:comfy /home/comfy
+
+# Switch to the non-root user
+USER comfy
+WORKDIR /home/comfy
+
+# Copy the binary into the container
+COPY --chown=comfy:comfy bin/dotcomfy bin/dotcomfy
+
+# TODO: Copy test scenarios that are wrapped as bash scripts
+
+# Default command (optional, replace with your binary execution command if needed)
+# CMD ["bin/dotcomfy"]
+
