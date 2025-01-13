@@ -34,7 +34,7 @@ func run(cmd *cobra.Command, args []string) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	dotcomfy_dir := user.HomeDir + ".dotcomfy"
+	dotcomfy_dir := user.HomeDir + "/.dotcomfy"
 	// Default to home directory if not set
 	old_dotfiles_dir := user.HomeDir
 
