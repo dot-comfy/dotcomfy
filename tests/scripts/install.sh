@@ -5,3 +5,4 @@
 set -xeuv
 
 ./bin/dotcomfy install https://gitlab.com/reavessm/dot-files
+ls -al .dotcomfy
