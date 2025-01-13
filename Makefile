@@ -12,7 +12,7 @@ help:
 .PHONY: help
 
 build:
-	go build -o bin/dotcomfy cmd/dotcomfy/main.go
+	go build -o bin/dotcomfy main.go
 
 .PHONY: build
 
