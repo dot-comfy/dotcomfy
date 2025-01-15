@@ -45,6 +45,10 @@ var uninstallCmd = &cobra.Command{
 		}
 
 		// Delete symlinks and rename ".pre-dotcomfy" files back to their old names
+		// TODO: This needs to be changed to walk through the dotcomfy directory
+		//       instead, since the current code doesn't accommodate for symlinks
+		//       that were created where a file didn't exist to begin with, and
+		//       would just end up orphaned.
 		err = filepath.WalkDir(old_dotfiles_dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "DEBUGPRINT[11]: uninstall.go:36: err=%+v\n", err)
