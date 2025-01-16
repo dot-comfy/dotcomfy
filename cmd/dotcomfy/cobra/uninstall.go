@@ -45,27 +45,31 @@ var uninstallCmd = &cobra.Command{
 		}
 
 		// Delete symlinks and rename ".pre-dotcomfy" files back to their old names
-		// TODO: This needs to be changed to walk through the dotcomfy directory
-		//       instead, since the current code doesn't accommodate for symlinks
-		//       that were created where a file didn't exist to begin with, and
-		//       would just end up orphaned.
-		err = filepath.WalkDir(old_dotfiles_dir, func(path string, d fs.DirEntry, err error) error {
+		err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "DEBUGPRINT[11]: uninstall.go:36: err=%+v\n", err)
+				fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:36: err=%+v\n", err)
 				return err
 			}
 			if !d.IsDir() {
-				if strings.Contains(path, ".pre-dotcomfy") {
-					old_name := strings.Replace(path, ".pre-dotcomfy", "", 1)
+				center_path := strings.TrimPrefix(path, dotcomfy_dir)
+				old_path := old_dotfiles_dir + center_path
+				if strings.Contains(old_path, ".pre-dotcomfy") {
+					old_name := strings.Replace(old_path, ".pre-dotcomfy", "", 1)
 					// Remove symlink
-					err = os.Remove(path)
+					err = os.Remove(old_path)
 					if err != nil {
-						fmt.Fprintf(os.Stderr, "DEBUGPRINT[12]: uninstall.go:47: err=%+v\n", err)
+						fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:47: err=%+v\n", err)
 						return err
 					}
-					err = os.Rename(path, old_name)
+					err = os.Rename(old_path, old_name)
 					if err != nil {
-						fmt.Fprintf(os.Stderr, "DEBUGPRINT[13]: uninstall.go:53: err=%+v\n", err)
+						fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:53: err=%+v\n", err)
+						return err
+					}
+				} else { // Just remove symlink
+					err = os.Remove(old_path)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:60: err=%+v\n", err)
 						return err
 					}
 				}
@@ -83,14 +87,14 @@ var uninstallCmd = &cobra.Command{
 		// Delete everything in ~/.dotcomfy
 		dir, err := os.Open(dotcomfy_dir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "DEBUGPRINT[14]: uninstall.go:71: err=%+v\n", err)
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:71: err=%+v\n", err)
 			os.Exit(1)
 		}
 		defer dir.Close()
 
 		names, err := dir.Readdirnames(-1)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "DEBUGPRINT[15]: uninstall.go:78: err=%+v\n", err)
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:78: err=%+v\n", err)
 			os.Exit(1)
 		}
 
@@ -102,20 +106,20 @@ var uninstallCmd = &cobra.Command{
 
 			file_info, err := os.Stat(file_path)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "DEBUGPRINT[16]: uninstall.go:91: err=%+v\n", err)
+				fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:91: err=%+v\n", err)
 				os.Exit(1)
 			}
 
 			if file_info.IsDir() {
 				err = os.RemoveAll(file_path)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "DEBUGPRINT[17]: uninstall.go:98: err=%+v\n", err)
+					fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:98: err=%+v\n", err)
 					continue
 				}
 			} else {
 				err = os.Remove(file_path)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "DEBUGPRINT[18]: uninstall.go:103: err=%+v\n", err)
+					fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:103: err=%+v\n", err)
 					continue
 				}
 			}
