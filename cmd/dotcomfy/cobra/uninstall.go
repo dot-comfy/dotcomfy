@@ -14,6 +14,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var confirm string
+
 // uninstallCmd represents the uninstall command
 var uninstallCmd = &cobra.Command{
 	Use:   "uninstall",
@@ -139,4 +141,6 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// uninstallCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().BoolSliceVarP(&confirm, "yes", "y", false, "Skips confirmation for uninstall")
+
 }
