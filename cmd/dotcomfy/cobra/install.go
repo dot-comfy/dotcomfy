@@ -45,7 +45,7 @@ func run(cmd *cobra.Command, args []string) {
 
 	os.MkdirAll(dotcomfy_dir, 0755)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "DEBUGPRINT[3]: install.go:45: err=%+v\n", err)
+		fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:47: err=%+v\n", err) 
 		os.Exit(1)
 	}
 
@@ -64,7 +64,7 @@ func run(cmd *cobra.Command, args []string) {
 		})
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "DEBUGPRINT[2]: install.go:66: err=%+v\n", err)
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:58: err=%+v\n", err)
 			os.Exit(1)
 		}
 	} else {
@@ -73,7 +73,7 @@ func run(cmd *cobra.Command, args []string) {
 		_, err = git.PlainClone(dotcomfy_dir, false, &git.CloneOptions{
 			URL: url,
 		})
-		fmt.Fprintf(os.Stderr, "DEBUGPRINT[4]: install.go:73: err=%+v\n", err)
+		fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:65: err=%+v\n", err)
 
 		if err != nil {
 			fmt.Println(err)
@@ -84,7 +84,7 @@ func run(cmd *cobra.Command, args []string) {
 	// Walk through the cloned repo and perform rename/symlink operations
 	err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "DEBUGPRINT[5]: install.go:86: err=%+v\n", err)
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:78: err=%+v\n", err)
 			return err
 		}
 
@@ -115,29 +115,29 @@ func rename_symlink_unix(old_dotfiles_dir, dotcomfy_dir, new_path string) (strin
 		new_path = new_path + ".pre-dotcomfy"
 		err = os.Rename(old_path, new_path)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "DEBUGPRINT[6]: install.go:117: err=%+v\n", err)
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:109: err=%+v\n", err)
 			return "", err
 		}
 		err = os.Symlink(new_path, old_path)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "DEBUGPRINT[7]: install.go:122: err=%+v\n", err)
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:114: err=%+v\n", err)
 			return "", err
 		}
 		return old_path, nil
 	} else if os.IsNotExist(err) {
 		err = os.MkdirAll(filepath.Dir(old_path), 0755)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "DEBUGPRINT[8]: install.go:129: err=%+v\n", err)
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:121: err=%+v\n", err)
 			return "", err
 		}
 		err = os.Symlink(new_path, old_path)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "DEBUGPRINT[9]: install.go:134: err=%+v\n", err)
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:126: err=%+v\n", err)
 			return "", err
 		}
 		return old_path, nil
 	} else {
-		fmt.Fprintf(os.Stderr, "DEBUGPRINT[10]: install.go:113: err=%+v\n", err)
+		fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:103: err=%+v\n", err)
 		return "", err
 	}
 }
