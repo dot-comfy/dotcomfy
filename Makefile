@@ -27,7 +27,32 @@ IMAGE_TAG := latest
 
 CONTAINER_RUNTIME := $(shell command -v podman >/dev/null 2>&1 && echo podman || echo docker)
 
+IMAGE=fedora:latest
+CONTAINER_NAME=temp-fedora
+SKEL_DIR=~
+
+# The following two targets get the contents of a typical Linux user's home
+# directory to use as a base for our tests
+
+pull-image:
+	@echo "Pulling $(IMAGE)"
+	@$(CONTAINER_RUNTIME) pull $(IMAGE)
+
+.PHONY: pull-image
+
+extract-home:
+	@echo "Creating temporary container..."
+	$(CONTAINER_RUNTIME) run -d --name $(CONTAINER_NAME) $(IMAGE) sleep infinity
+	@echo "Copying /etc/skel to $(SKEL_DIR)"
+	$(CONTAINER_RUNTIME) cp $(CONTAINER_NAME):/etc/skel $(SKEL_DIR)
+	$(CONTAINER_RUNTIME) stop $(CONTAINER_NAME)
+	$(CONTAINER_RUNTIME) rm $(CONTAINER_NAME)
+
+.PHONY: extract-home
+
 build-container:
+	@$(MAKE) pull-image
+	@$(MAKE) extract-home
 	$(CONTAINER_RUNTIME) build -t $(IMAGE_NAME):$(IMAGE_TAG) -f Containerfile
 
 .PHONY: build-container
