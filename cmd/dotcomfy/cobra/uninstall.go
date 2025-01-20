@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var confirm string
+var confirm bool
 
 // uninstallCmd represents the uninstall command
 var uninstallCmd = &cobra.Command{
@@ -25,13 +25,17 @@ var uninstallCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("uninstall called")
 		var confirmation string
-		fmt.Print("Are you sure you want to uninstall the current dotcomfy installation? (y/n)")
-		fmt.Scan(&confirmation)
+		fmt.Println(args)
+		if len(args) < 1 {
+			fmt.Print("Are you sure you want to uninstall the current dotcomfy installation? (y/n)")
+			fmt.Scan(&confirmation)
 
-		if confirmation != "y" {
-			fmt.Println("Aborting")
-			os.Exit(0)
+			if confirmation != "y" {
+				fmt.Println("Aborting")
+				os.Exit(0)
+			}
 		}
+		fmt.Println(args)
 
 		user, err := user.Current()
 		if err != nil {
@@ -40,11 +44,6 @@ var uninstallCmd = &cobra.Command{
 		}
 		dotcomfy_dir := user.HomeDir + ".dotcomfy"
 		old_dotfiles_dir := user.HomeDir + ".config"
-
-		if len(args) > 0 {
-			fmt.Println("Too many arguments")
-			os.Exit(1)
-		}
 
 		// Delete symlinks and rename ".pre-dotcomfy" files back to their old names
 		err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
@@ -141,6 +140,6 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// uninstallCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	rootCmd.PersistentFlags().BoolSliceVarP(&confirm, "yes", "y", false, "Skips confirmation for uninstall")
+	rootCmd.PersistentFlags().BoolVarP(&confirm, "yes", "y", false, "Skips confirmation for uninstall")
 
 }
