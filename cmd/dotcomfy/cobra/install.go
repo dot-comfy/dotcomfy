@@ -34,7 +34,7 @@ func run(cmd *cobra.Command, args []string) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	dotcomfy_dir := user.HomeDir + ".dotcomfy"
+	dotcomfy_dir := user.HomeDir + "/.dotcomfy"
 	// Default to home directory if not set
 	old_dotfiles_dir := user.HomeDir
 
@@ -45,14 +45,22 @@ func run(cmd *cobra.Command, args []string) {
 
 	os.MkdirAll(dotcomfy_dir, 0755)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:47: err=%+v\n", err)
+		fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:47: err=%+v\n", err) 
 		os.Exit(1)
 	}
 
-	if strings.Contains(args[0], "dotfiles.git") {
+	// TODO: change this to take a URL, add '.git' at the end if it's not there
+	//       and then attempt to clone the repo
+	if strings.Contains(args[0], "https://") {
 		fmt.Println("Custom repo")
+		var url string
+		if !strings.HasSuffix(args[0], ".git") {
+			url = args[0] + ".git"
+		} else {
+			url = args[0]
+		}
 		_, err = git.PlainClone(dotcomfy_dir, false, &git.CloneOptions{
-			URL: args[0],
+			URL: url,
 		})
 
 		if err != nil {
