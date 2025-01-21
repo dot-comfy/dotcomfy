@@ -140,6 +140,6 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// uninstallCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	rootCmd.PersistentFlags().BoolVarP(&confirm, "yes", "y", false, "Skips confirmation for uninstall")
+	uninstallCmd.PersistentFlags().BoolVarP(&confirm, "yes", "y", false, "Skips confirmation for uninstall")
 
 }
