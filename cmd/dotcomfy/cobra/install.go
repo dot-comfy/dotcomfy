@@ -35,8 +35,8 @@ func run(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 	dotcomfy_dir := user.HomeDir + "/.dotcomfy"
-	// Default to home directory if not set
-	old_dotfiles_dir := user.HomeDir
+	// Default to XDG_CONFIG_HOME directory if not set
+	old_dotfiles_dir := user.HomeDir + "/.config"
 
 	if len(args) > 1 {
 		fmt.Println("Too many arguments")
@@ -45,7 +45,7 @@ func run(cmd *cobra.Command, args []string) {
 
 	os.MkdirAll(dotcomfy_dir, 0755)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:47: err=%+v\n", err) 
+		fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:47: err=%+v\n", err)
 		os.Exit(1)
 	}
 
