@@ -14,6 +14,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var confirm bool
+
 // uninstallCmd represents the uninstall command
 var uninstallCmd = &cobra.Command{
 	Use:   "uninstall",
@@ -23,54 +25,60 @@ var uninstallCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("uninstall called")
 		var confirmation string
-		fmt.Print("Are you sure you want to uninstall the current dotcomfy installation? (y/n)")
-		fmt.Scan(&confirmation)
+		fmt.Println(args)
+		if !confirm {
+			fmt.Print("Are you sure you want to uninstall the current dotcomfy installation? (y/n)")
+			fmt.Scan(&confirmation)
 
-		if confirmation != "y" {
-			fmt.Println("Aborting")
-			os.Exit(0)
+			if confirmation != "y" {
+				fmt.Println("Aborting")
+				os.Exit(0)
+			}
 		}
+		fmt.Println(args)
 
 		user, err := user.Current()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		dotcomfy_dir := user.HomeDir + ".dotcomfy"
-		old_dotfiles_dir := user.HomeDir + ".config"
-
-		if len(args) > 0 {
-			fmt.Println("Too many arguments")
-			os.Exit(1)
-		}
+		dotcomfy_dir := user.HomeDir + "/.dotcomfy"
+		// Defaults to XDG_CONFIG_HOME if not set
+		old_dotfiles_dir := user.HomeDir + "/.config"
 
 		// Delete symlinks and rename ".pre-dotcomfy" files back to their old names
 		err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:36: err=%+v\n", err)
+				fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:50: err=%+v\n", err)
 				return err
 			}
 			if !d.IsDir() {
-				center_path := strings.TrimPrefix(path, dotcomfy_dir)
-				old_path := old_dotfiles_dir + center_path
-				if strings.Contains(old_path, ".pre-dotcomfy") {
-					old_name := strings.Replace(old_path, ".pre-dotcomfy", "", 1)
-					// Remove symlink
-					err = os.Remove(old_path)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:47: err=%+v\n", err)
-						return err
-					}
-					err = os.Rename(old_path, old_name)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:53: err=%+v\n", err)
-						return err
-					}
-				} else { // Just remove symlink
-					err = os.Remove(old_path)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:60: err=%+v\n", err)
-						return err
+				if strings.Contains(path, ".git") {
+					fmt.Println("Skipping .git directory")
+				} else if strings.Contains(path, dotcomfy_dir+"README.md") {
+					fmt.Println("Skipping root level README.md")
+				} else {
+					center_path := strings.TrimPrefix(path, dotcomfy_dir)
+					old_path := old_dotfiles_dir + center_path
+					if strings.Contains(old_path, ".pre-dotcomfy") {
+						old_name := strings.Replace(old_path, ".pre-dotcomfy", "", 1)
+						// Remove symlink
+						err = os.Remove(old_path)
+						if err != nil {
+							fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:47: err=%+v\n", err)
+							return err
+						}
+						err = os.Rename(old_path, old_name)
+						if err != nil {
+							fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:53: err=%+v\n", err)
+							return err
+						}
+					} else { // Just remove symlink
+						err = os.Remove(old_path)
+						if err != nil {
+							fmt.Fprintf(os.Stderr, "DEBUGPRINT: uninstall.go:60: err=%+v\n", err)
+							return err
+						}
 					}
 				}
 			}
@@ -139,4 +147,6 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// uninstallCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	uninstallCmd.PersistentFlags().BoolVarP(&confirm, "yes", "y", false, "Skips confirmation for uninstall")
+
 }
