@@ -12,8 +12,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/go-git/go-git/v5"
+	git "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/spf13/cobra"
+)
+
+var (
+	branch string
 )
 
 // installCmd represents the install command
@@ -49,8 +54,6 @@ func run(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// TODO: change this to take a URL, add '.git' at the end if it's not there
-	//       and then attempt to clone the repo
 	if strings.Contains(args[0], "https://") {
 		fmt.Println("Custom repo")
 		var url string
@@ -60,7 +63,9 @@ func run(cmd *cobra.Command, args []string) {
 			url = args[0]
 		}
 		_, err = git.PlainClone(dotcomfy_dir, false, &git.CloneOptions{
-			URL: url,
+			URL:           url,
+			ReferenceName: plumbing.ReferenceName(branch),
+			SingleBranch:  true,
 		})
 
 		if err != nil {
@@ -71,7 +76,9 @@ func run(cmd *cobra.Command, args []string) {
 		fmt.Println("Username")
 		url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
 		_, err = git.PlainClone(dotcomfy_dir, false, &git.CloneOptions{
-			URL: url,
+			URL:           url,
+			ReferenceName: plumbing.ReferenceName(branch),
+			SingleBranch:  true,
 		})
 		fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:65: err=%+v\n", err)
 
@@ -154,4 +161,5 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// installCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	installCmd.PersistentFlags().StringVarP(&branch, "branch", "b", "main", "Branch to clone")
 }
