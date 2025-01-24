@@ -17,10 +17,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	branch string
-)
-
 // installCmd represents the install command
 var installCmd = &cobra.Command{
 	Use:   "install [GitHub username/repo URL]",
