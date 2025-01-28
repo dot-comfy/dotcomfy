@@ -5,11 +5,16 @@ package cobra
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"os/user"
+	"path/filepath"
+	"strings"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/spf13/cobra"
+
+	"dotcomfy/internal/services"
 )
 
 // switchCmd represents the switch command
@@ -20,15 +25,16 @@ var switchCmd = &cobra.Command{
 	This will uninstall your current dotcomfy installation,
 	and install the dotfiles from the branch or repository
 	you are switching to.`,
-	Args: cobra.MinimumNArgs(1),
+	Args: cobra.MinimumNArgs(0),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if (branch == "") && (repo == "") || (branch != "" && repo != "") {
-			return fmt.Errorf("Exactly one of --branch or --repo must be specified")
+		if (branch == "") && (repo == "") {
+			return fmt.Errorf("At least one of --branch or --repo must be specified")
 		}
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("switch called")
+		var repo_url string
 		user, err := user.Current()
 		if err != nil {
 			fmt.Println(err)
@@ -38,46 +44,92 @@ var switchCmd = &cobra.Command{
 		// Defaults to XDG_CONFIG_HOME if not set
 		old_dotfiles_dir := user.HomeDir + "/.config"
 
-		if branch != "" {
-			err = switchBranch(dotcomfy_dir, old_dotfiles_dir, branch)
+		// Changing to different branch of same repo
+		if repo == "" && branch != "" {
+			r, err := git.PlainOpen(dotcomfy_dir)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:41: err=%+v\n", err)
+				fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:44: err=%+v\n", err)
+			}
+
+			remote, err := r.Remote("origin")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:49: err=%+v\n", err)
+			}
+
+			urls := remote.Config().URLs
+			if len(urls) > 0 {
+				repo_url = urls[0]
+			} else {
+				fmt.Println("No URL found for the remote 'origin'")
+			}
+
+			err = switchDotfiles(dotcomfy_dir, old_dotfiles_dir, repo_url, branch)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:61: err=%+v\n", err)
 				os.Exit(1)
 			}
-		} else {
-			err = switchRepo(dotcomfy_dir, old_dotfiles_dir, repo)
+		} else { // Changing to different repo
+			if strings.Contains(repo, "https://") {
+				if !strings.HasSuffix(repo, ".git") {
+					repo_url = repo + ".git"
+				} else {
+					repo_url = repo
+				}
+			} else {
+				repo_url = fmt.Sprintf("https://github.com/%s/dotfiles.git", repo)
+			}
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:79: repo_url=%+v\n", repo_url)
+			err = switchDotfiles(dotcomfy_dir, old_dotfiles_dir, repo_url, branch)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:48: err=%+v\n", err)
+				fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:67: err=%+v\n", err)
 				os.Exit(1)
 			}
 		}
 	},
 }
 
-func switchBranch(dotcomfy_dir, old_dotfiles_dir, branch string) error {
-	var repo_url string
-	r, err := git.PlainOpen(dotcomfy_dir)
+func switchDotfiles(dotcomfy_dir, old_dotfiles_dir, url, branch string) error {
+	// Perform uninstall
+	err := services.RemoveInstallation(dotcomfy_dir, old_dotfiles_dir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:59: err=%+v\n", err)
+		fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:91: err=%+v\n", err)
 		return err
 	}
 
-	remote, err := r.Remote("origin")
+	// Perform install
+	err = services.Clone(url, branch, dotcomfy_dir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:64: err=%+v\n", err)
+		fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:98: err=%+v\n", err)
 		return err
 	}
 
-	urls := remote.Config().URLs
-	if len(urls) > 0 {
-		repo_url = urls[0]
-	} else {
-		fmt.Println("No URL found for the remote 'origin'")
+	// Walk through the cloned repo and perform rename/symlink operations
+	err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:107: err=%+v\n", err)
+			return err
+		}
+
+		if !d.IsDir() {
+			if strings.Contains(path, ".git") {
+				fmt.Println("Skipping .git directory")
+			} else if strings.Contains(path, dotcomfy_dir+"README.md") {
+				fmt.Println("Skipping root level README.md")
+			} else {
+				_, err = services.RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, path)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:119: err=%+v\n", err)
+					return err
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:127: err=%+v\n", err)
+		return err
 	}
-}
-
-func switchRepo(dotcomfy_dir, old_dotfiles_dir, repo string) error {
-
+	return nil
 }
 
 func init() {
