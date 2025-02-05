@@ -1,0 +1,18 @@
+[dependencies]
+fzf = { version = "0.57.0" }
+nvim = { 
+    steps = [
+        "curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz",
+        "sudo rm -rf /opt/nvim",
+        "sudo tar -C /opt -xzf nvim-linux-x86_64.tar.gz",
+        "echo 'export PATH=\"$PATH:/opt/nvim-linux-x86_64/bin\"' >> .zshrc"
+    ]
+}
+ripgrep = { version = "14.1.1-1" }
+tmux = {}
+zig = { version = "0.13.0" }
+zsh = { 
+    post_install_steps = [
+        "chsh -s $(which zsh)"
+    ]
+}
