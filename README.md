@@ -1,1 +1,1 @@
-# dotcomfy
+![dotcomfy Logo](logo.jpg)
