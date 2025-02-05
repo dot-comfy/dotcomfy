@@ -14,8 +14,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var confirm bool
-
 // uninstallCmd represents the uninstall command
 var uninstallCmd = &cobra.Command{
 	Use:   "uninstall",
