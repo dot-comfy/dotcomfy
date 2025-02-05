@@ -1,6 +1,8 @@
 [dependencies]
+# Version can be specified for a package being installed from a package manager
 fzf = { version = "0.57.0" }
 nvim = { 
+    # Custom installations can be specified step by step
     steps = [
         "curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz",
         "sudo rm -rf /opt/nvim",
@@ -9,8 +11,11 @@ nvim = {
     ]
 }
 ripgrep = { version = "14.1.1-1" }
+# Empty configs will default to installing the latest version
+# of the package found in the package manager
 tmux = {}
 zig = { version = "0.13.0" }
+# Commands needed after package installation can also be specified
 zsh = { 
     post_install_steps = [
         "chsh -s $(which zsh)"
