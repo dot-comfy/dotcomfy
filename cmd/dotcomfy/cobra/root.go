@@ -4,10 +4,10 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cobra
 
 import (
-	"os"
-
+	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"os"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -34,6 +34,7 @@ func Execute() {
 }
 
 func init() {
+	cobra.OnInitialize(initConfig)
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
@@ -49,14 +50,19 @@ func initConfig() {
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
 	} else {
-		home, err := os.UserHomeDir()
+		cfg, err := os.UserConfigDir()
 		cobra.CheckErr(err)
 
-		cfg, err := os.UserConfigDir()
+		cfgFile = cfg + "/dotcomfy/config.toml"
 
-		viper.AddConfigPath(cfg + "/dotcomfy/")   // Config file can live in either $HOME/.config/dotcomfy/
-		viper.AddConfigPath(home + "/.dotcomfy/") // or $HOME/.dotcomfy/
+		fmt.Println("Using config file:", cfgFile)
+
+		viper.AddConfigPath(cfg + "/dotcomfy/") // Config file lives in $HOME/.config/dotcomfy/
 		viper.SetConfigName("config")
 		viper.SetConfigType("toml")
+		err = viper.ReadInConfig()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT: root.go:61: err=%+v\n", err)
+		}
 	}
 }
