@@ -12,6 +12,8 @@ import (
 	"dotcomfy/internal/config"
 )
 
+var all bool
+
 // dependenciesCmd represents the dependencies command
 var dependenciesCmd = &cobra.Command{
 	Use:   "dependencies",
@@ -23,10 +25,13 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if all {
+			allDependencies()
+			os.Exit(0)
+		}
+
 		dependency := args[0]
 
-		dependencies := config.GetDependencies()
-		fmt.Println(dependencies)
 		dependency_map, err := config.GetDependency(dependency)
 
 		if err != nil {
@@ -34,8 +39,23 @@ to quickly create a Cobra application.`,
 			os.Exit(1)
 		}
 
-		fmt.Println(dependency_map)
+		for k, v := range dependency_map {
+			switch k {
+			case "version":
+				fmt.Printf("Version: %s\n", v)
+			case "steps":
+				for i, step := range v.([]interface{}) {
+					fmt.Printf("Step %d: %s\n", i, step)
+				}
+			case "post_installation_steps":
+			}
+		}
 	},
+}
+
+func allDependencies() {
+	dependencies := config.GetDependencies()
+	fmt.Println(dependencies)
 }
 
 func init() {
@@ -50,4 +70,5 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// dependenciesCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	dependenciesCmd.Flags().BoolVar(&all, "all", false, "Get all dependencies")
 }

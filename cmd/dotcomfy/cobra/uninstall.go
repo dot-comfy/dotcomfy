@@ -24,7 +24,7 @@ var uninstallCmd = &cobra.Command{
 		fmt.Println("uninstall called")
 		var confirmation string
 		fmt.Println(args)
-		if !confirm {
+		if !CONFIRM {
 			fmt.Print("Are you sure you want to uninstall the current dotcomfy installation? (y/n)")
 			fmt.Scan(&confirmation)
 
@@ -145,6 +145,6 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// uninstallCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	uninstallCmd.PersistentFlags().BoolVarP(&confirm, "yes", "y", false, "Skips confirmation for uninstall")
+	uninstallCmd.PersistentFlags().BoolVarP(&CONFIRM, "yes", "y", false, "Skips confirmation for uninstall")
 
 }

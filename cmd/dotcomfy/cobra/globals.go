@@ -1,8 +1,13 @@
 package cobra
 
+import (
+	"dotcomfy/internal/config"
+)
+
 var (
-	branch  string
-	repo    string
-	confirm bool
-	cfgFile string
+	BRANCH   string
+	REPO     string
+	CONFIRM  bool
+	CFG_FILE string
+	CONFIG   config.Config
 )

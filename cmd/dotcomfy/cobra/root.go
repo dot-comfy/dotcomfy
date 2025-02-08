@@ -39,7 +39,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.dotcomfy/config.toml)")
+	rootCmd.PersistentFlags().StringVar(&CFG_FILE, "config", "", "config file (default is $HOME/.dotcomfy/config.toml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -47,15 +47,15 @@ func init() {
 }
 
 func initConfig() {
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
+	if CFG_FILE != "" {
+		viper.SetConfigFile(CFG_FILE)
 	} else {
 		cfg, err := os.UserConfigDir()
 		cobra.CheckErr(err)
 
-		cfgFile = cfg + "/dotcomfy/config.toml"
+		CFG_FILE = cfg + "/dotcomfy/config.toml"
 
-		fmt.Println("Using config file:", cfgFile)
+		fmt.Println("Using config file:", CFG_FILE)
 
 		viper.AddConfigPath(cfg + "/dotcomfy/") // Config file lives in $HOME/.config/dotcomfy/
 		viper.SetConfigName("config")
@@ -64,5 +64,8 @@ func initConfig() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "DEBUGPRINT: root.go:61: err=%+v\n", err)
 		}
+		viper.Unmarshal(&CONFIG)
+
+		fmt.Println(CONFIG)
 	}
 }

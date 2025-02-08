@@ -58,7 +58,7 @@ func run(cmd *cobra.Command, args []string) {
 		} else {
 			url = args[0]
 		}
-		err = services.Clone(url, branch, dotcomfy_dir)
+		err = services.Clone(url, BRANCH, dotcomfy_dir)
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:58: err=%+v\n", err)
@@ -67,7 +67,7 @@ func run(cmd *cobra.Command, args []string) {
 	} else {
 		fmt.Println("Username")
 		url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
-		err = services.Clone(url, branch, dotcomfy_dir)
+		err = services.Clone(url, BRANCH, dotcomfy_dir)
 		fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:65: err=%+v\n", err)
 
 		if err != nil {
@@ -108,5 +108,5 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// installCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	installCmd.PersistentFlags().StringVarP(&branch, "branch", "b", "main", "Branch to clone")
+	installCmd.PersistentFlags().StringVarP(&BRANCH, "branch", "b", "main", "Branch to clone")
 }

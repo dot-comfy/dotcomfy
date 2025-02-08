@@ -27,7 +27,7 @@ var switchCmd = &cobra.Command{
 	you are switching to.`,
 	Args: cobra.MinimumNArgs(0),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if (branch == "") && (repo == "") {
+		if (BRANCH == "") && (REPO == "") {
 			return fmt.Errorf("At least one of --branch or --repo must be specified")
 		}
 		return nil
@@ -45,7 +45,7 @@ var switchCmd = &cobra.Command{
 		old_dotfiles_dir := user.HomeDir + "/.config"
 
 		// Changing to different branch of same repo
-		if repo == "" && branch != "" {
+		if REPO == "" && BRANCH != "" {
 			r, err := git.PlainOpen(dotcomfy_dir)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:44: err=%+v\n", err)
@@ -63,23 +63,23 @@ var switchCmd = &cobra.Command{
 				fmt.Println("No URL found for the remote 'origin'")
 			}
 
-			err = switchDotfiles(dotcomfy_dir, old_dotfiles_dir, repo_url, branch)
+			err = switchDotfiles(dotcomfy_dir, old_dotfiles_dir, repo_url, BRANCH)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:61: err=%+v\n", err)
 				os.Exit(1)
 			}
 		} else { // Changing to different repo
-			if strings.Contains(repo, "https://") {
-				if !strings.HasSuffix(repo, ".git") {
-					repo_url = repo + ".git"
+			if strings.Contains(REPO, "https://") {
+				if !strings.HasSuffix(REPO, ".git") {
+					repo_url = REPO + ".git"
 				} else {
-					repo_url = repo
+					repo_url = REPO
 				}
 			} else {
-				repo_url = fmt.Sprintf("https://github.com/%s/dotfiles.git", repo)
+				repo_url = fmt.Sprintf("https://github.com/%s/dotfiles.git", REPO)
 			}
 			fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:79: repo_url=%+v\n", repo_url)
-			err = switchDotfiles(dotcomfy_dir, old_dotfiles_dir, repo_url, branch)
+			err = switchDotfiles(dotcomfy_dir, old_dotfiles_dir, repo_url, BRANCH)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "DEBUGPRINT: switch.go:67: err=%+v\n", err)
 				os.Exit(1)
@@ -144,6 +144,6 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// switchCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	switchCmd.Flags().StringVar(&branch, "branch", "", "Branch to switch to")
-	switchCmd.Flags().StringVar(&repo, "repo", "", "Repository to switch to")
+	switchCmd.Flags().StringVar(&BRANCH, "branch", "", "Branch to switch to")
+	switchCmd.Flags().StringVar(&REPO, "repo", "", "Repository to switch to")
 }
