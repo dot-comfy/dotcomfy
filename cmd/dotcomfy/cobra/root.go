@@ -65,7 +65,5 @@ func initConfig() {
 			fmt.Fprintf(os.Stderr, "DEBUGPRINT: root.go:61: err=%+v\n", err)
 		}
 		viper.Unmarshal(&CONFIG)
-
-		fmt.Println(CONFIG)
 	}
 }

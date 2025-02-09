@@ -47,8 +47,21 @@ to quickly create a Cobra application.`,
 				for i, step := range v.([]interface{}) {
 					fmt.Printf("Step %d: %s\n", i, step)
 				}
-			case "post_installation_steps":
+			case "post_install_steps":
+				for i, step := range v.([]interface{}) {
+					fmt.Printf("Post install Step %d: %s\n", i, step)
+				}
+			case "script":
+				fmt.Printf("Script location: %s\n", v)
+			case "post_install_script":
+				fmt.Printf("Post install Script location: %s\n", v)
+			default:
+				fmt.Printf("Unknown key: %s\n", k)
 			}
+		}
+
+		if len(dependency_map) == 0 {
+			fmt.Println("Installing package at latest version from package manager")
 		}
 	},
 }
