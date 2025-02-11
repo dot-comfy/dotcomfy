@@ -14,6 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	Config "dotcomfy/internal/config"
 	"dotcomfy/internal/services"
 )
 
@@ -94,6 +95,18 @@ func run(cmd *cobra.Command, args []string) {
 		}
 		return nil
 	})
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var config Config.Config
+	config = Config.GetConfig()
+
+	err = services.InstallDependencies(config)
+
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 func init() {

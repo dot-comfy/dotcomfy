@@ -56,14 +56,5 @@ func initConfig() {
 		CFG_FILE = cfg + "/dotcomfy/config.toml"
 
 		fmt.Println("Using config file:", CFG_FILE)
-
-		viper.AddConfigPath(cfg + "/dotcomfy/") // Config file lives in $HOME/.config/dotcomfy/
-		viper.SetConfigName("config")
-		viper.SetConfigType("toml")
-		err = viper.ReadInConfig()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "DEBUGPRINT: root.go:61: err=%+v\n", err)
-		}
-		viper.Unmarshal(&CONFIG)
 	}
 }

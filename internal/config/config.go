@@ -2,7 +2,8 @@ package config
 
 import (
 	"errors"
-	// "os"
+	"fmt"
+	"os"
 
 	"github.com/spf13/viper"
 )
@@ -19,18 +20,28 @@ type Dependency struct {
 	Version           string   `toml:"version,omitempty"`
 }
 
-/*
 var config Config
 
 func GetConfig() Config {
-	data, err := os.ReadFile()
+	cfg, err := os.UserConfigDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "DEBUGPRINT: config.go:27: err=%+v\n", err)
+		os.Exit(1)
+	}
+	viper.AddConfigPath(cfg + "/dotcomfy/") // Config file lives in $HOME/.config/dotcomfy/
+	viper.SetConfigName("config")
+	viper.SetConfigType("toml")
+	err = viper.ReadInConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "DEBUGPRINT: config.go:29: err=%+v\n", err)
+	}
+	viper.Unmarshal(&config)
 	return config
 }
 
 func SetConfig(newConfig Config) {
 	config = newConfig
 }
-*/
 
 func GetDependencies() map[string]string {
 	dependencies := viper.GetStringMapString("dependencies")
