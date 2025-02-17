@@ -6,6 +6,8 @@ RUN groupadd -r comfy && useradd -r -g comfy -d /home/comfy comfy
 # Create and set up the work directory
 RUN mkdir -p /home/comfy && chown -R comfy:comfy /home/comfy
 
+RUN dnf install -y which
+
 # Switch to the non-root user
 USER comfy
 WORKDIR /home/comfy

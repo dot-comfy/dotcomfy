@@ -8,14 +8,16 @@ import (
 	Config "dotcomfy/internal/config"
 )
 
-func InstallDependencies(config Config.Config) error {
-	fmt.Println("Installing dependencies")
+func InstallDependenciesLinux(config Config.Config) error {
 	cfg_dir, err := os.UserConfigDir()
 	if err != nil {
 		return err
 	}
 	dotcomfy_dir := filepath.Join(cfg_dir, "dotcomfy")
 	dependencies := config.Dependencies
+	fmt.Fprintf(os.Stderr, "DEBUGPRINT: dependencies.go:17: dependencies=%+v\n", dependencies)
+	package_manager, err := checkPackageManager()
+
 	for dependency := range dependencies {
 		dependency_map, err := Config.GetDependency(dependency)
 
@@ -23,10 +25,15 @@ func InstallDependencies(config Config.Config) error {
 			return err
 		}
 
+		// TODO: handle all fields being empty means it should just be installed at latest version from package manager
 		for k, v := range dependency_map {
 			switch k {
 			case "version":
-				fmt.Printf("Version: %s\n", v)
+				fmt.Printf("Installing %s at version %s from package manager %s...\n", dependency, v.(string), package_manager)
+				err = installPackage(package_manager, dependency, v.(string))
+				if err != nil {
+					fmt.Println("Error installing package:", err)
+				}
 			case "steps":
 				for i, step := range v.([]interface{}) {
 					fmt.Printf("Step %d: %s\n", i, step)

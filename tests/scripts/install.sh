@@ -4,7 +4,7 @@
 
 set -xeuv
 
-# ./bin/dotcomfy install https://gitlab.com/reavessm/dot-files
+# ./bin/dotcomfy install https://gitlab.com/reavessm/dot-files --skip-dependencies
 # ls -al .dotcomfy
 # sleep 5
 # 
@@ -12,7 +12,7 @@ set -xeuv
 # ls -al .dotcomfy
 # sleep 5
 # 
-# ./bin/dotcomfy install ethangamma24 --branch macOS
+# ./bin/dotcomfy install ethangamma24 --branch macOS --skip-dependencies
 # ls -al .dotcomfy
 # sleep 5
 # 
@@ -20,7 +20,12 @@ set -xeuv
 # ls -al .dotcomfy
 # sleep 5
 
+
+which fzf || true
+which tmux || true
+which zig || true
 ./bin/dotcomfy install ethangamma24 --branch hyprland
-ls -al .config/dotcomfy
-ls -al .dotcomfy
+which fzf || true
+which tmux || true
+which zig || true
 sleep 5

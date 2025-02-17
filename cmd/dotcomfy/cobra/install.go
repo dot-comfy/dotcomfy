@@ -18,6 +18,8 @@ import (
 	"dotcomfy/internal/services"
 )
 
+var skip_dependencies bool
+
 // installCmd represents the install command
 var installCmd = &cobra.Command{
 	Use:   "install [GitHub username/repo URL]",
@@ -99,14 +101,17 @@ func run(cmd *cobra.Command, args []string) {
 		fmt.Println(err)
 	}
 
-	var config Config.Config
-	config = Config.GetConfig()
+	if !skip_dependencies {
+		var config Config.Config
+		config = Config.GetConfig()
 
-	err = services.InstallDependencies(config)
+		err = services.InstallDependenciesLinux(config)
 
-	if err != nil {
-		fmt.Println(err)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
+
 }
 
 func init() {
@@ -122,4 +127,5 @@ func init() {
 	// is called directly, e.g.:
 	// installCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	installCmd.PersistentFlags().StringVarP(&BRANCH, "branch", "b", "main", "Branch to clone")
+	installCmd.Flags().BoolVar(&skip_dependencies, "skip-dependencies", false, "Skip installing dependencies")
 }
