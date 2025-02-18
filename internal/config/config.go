@@ -13,6 +13,7 @@ type Config struct {
 }
 
 type Dependency struct {
+	Name              string   `toml:"name,omitempty"`
 	PostInstallSteps  []string `toml:"post_install_steps,omitempty"`
 	PostInstallScript string   `toml:"post_install_script,omitempty"`
 	Steps             []string `toml:"steps,omitempty"`
@@ -22,6 +23,9 @@ type Dependency struct {
 
 var config Config
 
+// TODO: viper is omitting dependencies with empty maps in the config file.
+//
+//	I'll probably have to parse the config file manually
 func GetConfig() Config {
 	cfg, err := os.UserConfigDir()
 	if err != nil {
@@ -36,6 +40,7 @@ func GetConfig() Config {
 		fmt.Fprintf(os.Stderr, "DEBUGPRINT: config.go:29: err=%+v\n", err)
 	}
 	viper.Unmarshal(&config)
+	fmt.Println(config)
 	return config
 }
 
