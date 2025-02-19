@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM archlinux:latest
 
 # Create a non-root user and group
 RUN groupadd -r comfy && useradd -r -g comfy -d /home/comfy comfy
@@ -6,13 +6,16 @@ RUN groupadd -r comfy && useradd -r -g comfy -d /home/comfy comfy
 # Create and set up the work directory
 RUN mkdir -p /home/comfy && chown -R comfy:comfy /home/comfy
 
-RUN groupadd -r wheel
-
-RUN apt update -y && apt upgrade -y && apt install -y sudo libc6 && usermod -aG wheel comfy
-
-RUN apt install --reinstall ca-certificates -y
+RUN pacman -Syu && pacman -S --noconfirm sudo && usermod -aG wheel comfy
+RUN usermod -aG wheel comfy
 
 RUN echo 'comfy ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+RUN pacman -S --needed --noconfirm which git base-devel go
+
+RUN git clone https://aur.archlinux.org/yay.git && \
+    cd yay && \
+    makepkg -si
 
 # Switch to the non-root user
 USER comfy

@@ -25,7 +25,7 @@ var uninstallCmd = &cobra.Command{
 		var confirmation string
 		fmt.Println(args)
 		if !CONFIRM {
-			fmt.Print("Are you sure you want to uninstall the current dotcomfy installation? (y/n)")
+			fmt.Print("Are you sure you want to uninstall the current dotcomfy installation? (y/n) ")
 			fmt.Scan(&confirmation)
 
 			if confirmation != "y" {

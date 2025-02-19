@@ -32,7 +32,6 @@ var installCmd = &cobra.Command{
 }
 
 func run(cmd *cobra.Command, args []string) {
-	fmt.Println("install called")
 	user, err := user.Current()
 	if err != nil {
 		fmt.Println(err)
@@ -54,7 +53,6 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	if strings.Contains(args[0], "https://") {
-		fmt.Println("Custom repo")
 		var url string
 		if !strings.HasSuffix(args[0], ".git") {
 			url = args[0] + ".git"
@@ -68,7 +66,6 @@ func run(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 	} else {
-		fmt.Println("Username")
 		url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
 		err = services.Clone(url, BRANCH, dotcomfy_dir)
 		fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:65: err=%+v\n", err)
@@ -86,14 +83,8 @@ func run(cmd *cobra.Command, args []string) {
 			return err
 		}
 
-		if !d.IsDir() {
-			if strings.Contains(path, ".git") {
-				fmt.Println("Skipping .git directory")
-			} else if strings.Contains(path, dotcomfy_dir+"README.md") {
-				fmt.Println("Skipping root level README.md")
-			} else {
-				_, err = services.RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, path)
-			}
+		if !d.IsDir() && !strings.Contains(path, ".git") && !strings.Contains(path, "README.md") {
+			_, err = services.RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, path)
 		}
 		return nil
 	})

@@ -4,7 +4,6 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cobra
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
@@ -54,7 +53,5 @@ func initConfig() {
 		cobra.CheckErr(err)
 
 		CFG_FILE = cfg + "/dotcomfy/config.toml"
-
-		fmt.Println("Using config file:", CFG_FILE)
 	}
 }

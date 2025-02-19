@@ -16,7 +16,7 @@ import (
  */
 
 // TODO: reimpliment this using a getter/setter
-func checkPackageManager() (string, error) {
+func CheckPackageManager() (string, error) {
 	exists := func(pm string) bool {
 		_, err := exec.LookPath(pm)
 		return err == nil
@@ -28,10 +28,10 @@ func checkPackageManager() (string, error) {
 		return "dnf", nil
 	} else if exists("yum") {
 		return "yum", nil
-	} else if exists("pacman") {
-		return "pacman", nil
 	} else if exists("yay") {
 		return "yay", nil
+	} else if exists("pacman") {
+		return "pacman", nil
 	} else if exists("zypper") {
 		return "zypper", nil
 	} else {
@@ -39,7 +39,7 @@ func checkPackageManager() (string, error) {
 	}
 }
 
-func installPackage(pm string, pkg string, version string) error {
+func InstallPackage(pm string, pkg string, version string) error {
 	switch pm {
 	case "apt":
 		if version != "" {
@@ -73,7 +73,7 @@ func installPackage(pm string, pkg string, version string) error {
 		if version != "" {
 			log.Output(1, "Version not supported for yay")
 		}
-		err := exec.Command("sudo", "yay", "-S", "--noconfirm", pkg).Run()
+		err := exec.Command("yay", "--noconfirm", pkg).Run()
 		return err
 	case "zypper":
 		if version != "" {
@@ -84,4 +84,16 @@ func installPackage(pm string, pkg string, version string) error {
 	default:
 		return errors.New("Unknown package manager")
 	}
+}
+
+func HandleSteps(steps []interface{}) error {
+	for _, step := range steps {
+		cmd := exec.Command("/bin/sh", "-c", step.(string))
+		output, err := cmd.CombinedOutput()
+		fmt.Println(string(output))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
