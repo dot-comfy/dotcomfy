@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	Config "dotcomfy/internal/config"
@@ -19,6 +20,17 @@ func InstallDependenciesLinux(config Config.Config) error {
 	package_manager, err := checkPackageManager()
 	fmt.Println(dotcomfy_dir)
 
+	fmt.Println("Please enter your password to install dependencies: ")
+	cmd := exec.Command("sudo", "-S", os.Args[0])
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err != nil {
+		fmt.Println("Error running with sudo:", err)
+		return err
+	}
+
 	for dependency := range dependencies {
 		dependency_map, err := Config.GetDependency(dependency)
 
@@ -26,24 +38,15 @@ func InstallDependenciesLinux(config Config.Config) error {
 			return err
 		}
 
-		fmt.Println(dependency)
-		fmt.Println(dependency_map)
-		fmt.Println(len(dependency_map))
-
-		// TODO: handle all fields being empty means it should just be installed at latest version from package manager
-		if len(dependency_map) == 0 {
-			fmt.Printf("Installing %s from package manager %s...\n", dependency, package_manager)
-			err = installPackage(package_manager, dependency, "")
-			if err != nil {
-				fmt.Println("Error installing package:", err)
-			}
-			continue
-		}
 		for k, v := range dependency_map {
 			switch k {
 			case "version":
 				fmt.Printf("Installing %s at version %s from package manager %s...\n", dependency, v.(string), package_manager)
-				err = installPackage(package_manager, dependency, v.(string))
+				if v.(string) == "latest" {
+					err = installPackage(package_manager, dependency, "")
+				} else {
+					err = installPackage(package_manager, dependency, v.(string))
+				}
 				if err != nil {
 					fmt.Println("Error installing package:", err)
 				}

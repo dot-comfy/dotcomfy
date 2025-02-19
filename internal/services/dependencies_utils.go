@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os/exec"
 )
@@ -50,7 +51,9 @@ func installPackage(pm string, pkg string, version string) error {
 		if version != "" {
 			pkg = pkg + "-" + version
 		}
-		err := exec.Command("sudo", "dnf", "install", "-y", pkg).Run()
+		cmd := fmt.Sprintf("sudo -S dnf install %s -y --skip-unavailable", pkg)
+		command := exec.Command("/bin/sh", "-c", cmd)
+		_, err := command.CombinedOutput()
 		return err
 	case "yum":
 		if version != "" {
@@ -62,7 +65,9 @@ func installPackage(pm string, pkg string, version string) error {
 		if version != "" {
 			pkg = pkg + "=" + version
 		}
-		err := exec.Command("sudo", "pacman", "-S", "--noconfirm", pkg).Run()
+		cmd := fmt.Sprintf("sudo -S pacman -S %s --noconfirm", pkg)
+		command := exec.Command("/bin/sh", "-c", cmd)
+		_, err := command.CombinedOutput()
 		return err
 	case "yay":
 		if version != "" {

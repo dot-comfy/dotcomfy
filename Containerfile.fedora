@@ -1,4 +1,4 @@
-FROM archlinux:latest
+FROM quay.io/fedora/fedora:41
 
 # Create a non-root user and group
 RUN groupadd -r comfy && useradd -r -g comfy -d /home/comfy comfy
@@ -6,12 +6,11 @@ RUN groupadd -r comfy && useradd -r -g comfy -d /home/comfy comfy
 # Create and set up the work directory
 RUN mkdir -p /home/comfy && chown -R comfy:comfy /home/comfy
 
-RUN pacman -Syu && pacman -S --noconfirm sudo && usermod -aG wheel comfy
-RUN usermod -aG wheel comfy
+RUN dnf install -y sudo && usermod -aG wheel comfy
 
 RUN echo 'comfy ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-RUN pacman -S --noconfirm which
+RUN dnf install -y which
 
 # Switch to the non-root user
 USER comfy
