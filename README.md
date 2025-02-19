@@ -1,6 +1,6 @@
 ![dotcomfy Logo](logo.jpg)
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/your-username/dotcomfy)](https://goreportcard.com/report/github.com/your-username/dotcomfy)
+[![Go Report Card](https://goreportcard.com/badge/github.com/dot-comfy/dotcomfy)](https://goreportcard.com/report/github.com/dot-comfy/dotcomfy)
 
 **dotcomfy** is a CLI tool designed to simplify the management of configuration files for developer tools like Neovim, Tmux, Alacritty, and more. With dotcomfy, you can install, switch, and manage your config files with ease, automating the setup of package dependencies along the way.
 
