@@ -24,10 +24,10 @@ set -xeuv
 which fzf || true
 which tmux || true
 which zig || true
-which Hyprland || true
+which nvm || true
 ./bin/dotcomfy install ethangamma24 --branch hyprland
 which fzf || true
 which tmux || true
 which zig || true
-which Hyprland || true
+which nvm || true
 sleep 5

@@ -31,9 +31,9 @@ func InstallDependenciesLinux(config Config.Config) error {
 			return err
 		}
 
+		// Handle version case first before any post install steps or scripts
 		for k, v := range dependency_map {
-			switch k {
-			case "version":
+			if k == "version" {
 				fmt.Printf("Installing %s at version %s from package manager %s...\n", dependency, v.(string), package_manager)
 				if v.(string) == "latest" {
 					err = InstallPackage(package_manager, dependency, "")
@@ -43,14 +43,19 @@ func InstallDependenciesLinux(config Config.Config) error {
 				if err != nil {
 					fmt.Println("Error installing package:", err)
 				}
+			}
+		}
+
+		for k, v := range dependency_map {
+			switch k {
 			case "steps":
 				fmt.Printf("Running steps for %s...\n", dependency)
 				HandleSteps(v.([]interface{}))
+			case "post_install_steps":
+				for i, step := range v.([]interface{}) {
+					fmt.Printf("Post install Step %d: %s\n", i, step)
+				}
 			/*
-				case "post_install_steps":
-					for i, step := range v.([]interface{}) {
-						fmt.Printf("Post install Step %d: %s\n", i, step)
-					}
 				case "script":
 					fmt.Printf("Script location: %s\n", v)
 					file_path := filepath.Join(dotcomfy_dir, v.(string))

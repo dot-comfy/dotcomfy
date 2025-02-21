@@ -48,6 +48,15 @@ func SetConfig(newConfig Config) {
 	config = newConfig
 }
 
+// TODO: Validate dependencies in config.
+//
+//	If version exists, steps and/or script should not exist.
+//	post_install_steps and/or post_install_script are mutually exclusive.
+//	steps and script are mutually exclusive.
+func ValidateConfig() error {
+
+}
+
 func GetDependencies() map[string]string {
 	dependencies := viper.GetStringMapString("dependencies")
 	return dependencies
