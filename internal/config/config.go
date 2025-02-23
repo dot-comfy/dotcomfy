@@ -14,11 +14,14 @@ type Config struct {
 
 type Dependency struct {
 	Name              string   `toml:"name,omitempty"`
+	Needs             []string `toml:"needs,omitempty"`
 	PostInstallSteps  []string `toml:"post_install_steps,omitempty"`
 	PostInstallScript string   `toml:"post_install_script,omitempty"`
 	Steps             []string `toml:"steps,omitempty"`
 	Script            string   `toml:"script,omitempty"`
 	Version           string   `toml:"version,omitempty"`
+	Installed         bool
+	FailedInstall     bool
 }
 
 var config Config

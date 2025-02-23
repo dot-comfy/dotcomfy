@@ -4,7 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+
+	Config "dotcomfy/internal/config"
 )
 
 /*
@@ -38,26 +41,75 @@ func CheckPackageManager() (string, error) {
 	}
 }
 
-// TODO: Create map[bool]string where each key is a dependency
+// TODO:
 //
-//	and the value is false by default. The value will be set
-//	to true when the dependency is installed
-func InstallDependency(dependency string) error {
-	dependency_map, err := Config.GetDependency(dependency)
-	if err != nil {
-		return err
-	}
+//   - Create global copy of dependencies so that `Installed` and `FailedInstall`
+//     can be properly tracked across multiple calls of `InstallDependency`.
+func InstallDependency(dependency string, pm string) []error {
+	var d Config.Dependency
+	var needs []string
+	var errs []error
 
-	_, exists := dependency_map["needs"]
-	if exists {
-		needs := dependency_map["needs"].([]string)
+	d = dependencies[dependency]
+	needs = d.Needs
+	if needs != nil {
 		for _, need := range needs {
-			err := InstallDependency(need)
+			if dependencies[need].FailedInstall {
+				err := errors.New("Dependency \"" + need + "\" previously failed to install, skipping \"" + dependency + "\"...")
+				fmt.Println(err)
+				errs = append(errs, err)
+				return errs
+			}
+			err := InstallDependency(need, pm)
 			if err != nil {
-				return err
+				errs = append(errs, err...)
 			}
 		}
 	}
+
+	if d.Installed {
+		return errs
+	} else if d.FailedInstall {
+		err := errors.New("Dependency \"" + dependency + "\" previously failed to install, skipping...")
+		fmt.Println(err)
+		errs = append(errs, err)
+		return errs
+	} else if d.Version != "" {
+		fmt.Println("Installing dependency \"" + dependency + "\"...")
+		err := InstallPackage(pm, dependency, d.Version)
+		if err != nil {
+			d.FailedInstall = true
+			fmt.Println("Dependency \"" + dependency + "\" failed to install from package manager...")
+			errs = append(errs, err)
+		}
+		if d.PostInstallSteps != nil {
+			err := HandleSteps(d.PostInstallSteps)
+			if err != nil {
+				d.FailedInstall = true
+				fmt.Println("Dependency \"" + dependency + "\" failed during the post install steps...")
+				errs = append(errs, err)
+				return errs
+			}
+		} else if d.PostInstallScript != "" {
+			// TODO: Handle post install script
+		}
+		d.Installed = true
+	} else {
+		fmt.Println("Installing dependency \"" + dependency + "\"...")
+		if d.Steps != nil {
+			err := HandleSteps(d.Steps)
+			if err != nil {
+				d.FailedInstall = true
+				fmt.Println("Dependency \"" + dependency + "\" failed during the install steps...")
+				errs = append(errs, err)
+				return errs
+			}
+		} else {
+			// TODO: Handle script
+		}
+		d.Installed = true
+	}
+	return errs
 }
 
 func InstallPackage(pm string, pkg string, version string) error {
@@ -73,6 +125,7 @@ func InstallPackage(pm string, pkg string, version string) error {
 			pkg = pkg + "-" + version
 		}
 		cmd := fmt.Sprintf("sudo -S dnf install %s -y --skip-unavailable", pkg)
+		fmt.Fprintf(os.Stderr, "DEBUGPRINT: dependencies_utils.go:122: cmd=%+v\n", cmd)
 		command := exec.Command("/bin/sh", "-c", cmd)
 		_, err := command.CombinedOutput()
 		return err
@@ -107,9 +160,9 @@ func InstallPackage(pm string, pkg string, version string) error {
 	}
 }
 
-func HandleSteps(steps []interface{}) error {
+func HandleSteps(steps []string) error {
 	for _, step := range steps {
-		cmd := exec.Command("/bin/sh", "-c", step.(string))
+		cmd := exec.Command("/bin/sh", "-c", step)
 		output, err := cmd.CombinedOutput()
 		fmt.Println(string(output))
 		if err != nil {
