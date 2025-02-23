@@ -45,11 +45,7 @@ func SetConfig(newConfig Config) {
 	config = newConfig
 }
 
-// TODO: Validate dependencies in config.
-//
-//	If version exists, steps and/or script should not exist.
-//	post_install_steps and/or post_install_script are mutually exclusive.
-//	steps and script are mutually exclusive.
+// TODO: Add "needs" cyclical dependency check
 func ValidateDependencies(dependencies map[string]Dependency) []error {
 	errs := []error{}
 	for dependency := range dependencies {

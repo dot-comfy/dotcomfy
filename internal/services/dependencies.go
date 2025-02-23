@@ -9,6 +9,8 @@ import (
 	Config "dotcomfy/internal/config"
 )
 
+type Installed bool
+
 func InstallDependenciesLinux(config Config.Config) error {
 	dependencies := config.Dependencies
 

@@ -15,7 +15,6 @@ import (
  * package managers.
  */
 
-// TODO: reimpliment this using a getter/setter
 func CheckPackageManager() (string, error) {
 	exists := func(pm string) bool {
 		_, err := exec.LookPath(pm)
@@ -36,6 +35,28 @@ func CheckPackageManager() (string, error) {
 		return "zypper", nil
 	} else {
 		return "", errors.New("Unknown package manager")
+	}
+}
+
+// TODO: Create map[bool]string where each key is a dependency
+//
+//	and the value is false by default. The value will be set
+//	to true when the dependency is installed
+func InstallDependency(dependency string) error {
+	dependency_map, err := Config.GetDependency(dependency)
+	if err != nil {
+		return err
+	}
+
+	_, exists := dependency_map["needs"]
+	if exists {
+		needs := dependency_map["needs"].([]string)
+		for _, need := range needs {
+			err := InstallDependency(need)
+			if err != nil {
+				return err
+			}
+		}
 	}
 }
 

@@ -6,8 +6,8 @@ import (
 
 var (
 	BRANCH   string
-	REPO     string
 	CONFIRM  bool
 	CFG_FILE string
 	CONFIG   config.Config
+	REPO     string
 )
