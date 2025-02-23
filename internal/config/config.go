@@ -23,9 +23,6 @@ type Dependency struct {
 
 var config Config
 
-// TODO: viper is omitting dependencies with empty maps in the config file.
-//
-//	I'll probably have to parse the config file manually
 func GetConfig() Config {
 	cfg, err := os.UserConfigDir()
 	if err != nil {
@@ -53,8 +50,32 @@ func SetConfig(newConfig Config) {
 //	If version exists, steps and/or script should not exist.
 //	post_install_steps and/or post_install_script are mutually exclusive.
 //	steps and script are mutually exclusive.
-func ValidateConfig() error {
+func ValidateDependencies(dependencies map[string]Dependency) []error {
+	errs := []error{}
+	for dependency := range dependencies {
+		dependency_map, err := GetDependency(dependency)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
 
+		_, version_exists := dependency_map["version"]
+		_, post_install_steps_exists := dependency_map["post_install_steps"]
+		_, post_install_script_exists := dependency_map["post_install_script"]
+		_, steps_exists := dependency_map["steps"]
+		_, script_exists := dependency_map["script"]
+
+		if version_exists && steps_exists {
+			errs = append(errs, errors.New("Dependency \""+dependency+"\" cannot have both \"version\" and \"steps\""))
+		} else if version_exists && script_exists {
+			errs = append(errs, errors.New("Dependency \""+dependency+"\" cannot have both \"version\" and \"script\""))
+		} else if steps_exists && script_exists {
+			errs = append(errs, errors.New("Dependency \""+dependency+"\" cannot have both \"steps\" and \"script\""))
+		} else if post_install_steps_exists && post_install_script_exists {
+			errs = append(errs, errors.New("Dependency \""+dependency+"\" cannot have both \"post_install_steps\" and \"post_install_script\""))
+		}
+	}
+	return errs
 }
 
 func GetDependencies() map[string]string {

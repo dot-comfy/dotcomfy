@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,14 @@ import (
 
 func InstallDependenciesLinux(config Config.Config) error {
 	dependencies := config.Dependencies
+
+	errs := Config.ValidateDependencies(dependencies)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			fmt.Println(err)
+		}
+		return errors.New("Invalid config file")
+	}
 
 	package_manager, err := CheckPackageManager()
 
