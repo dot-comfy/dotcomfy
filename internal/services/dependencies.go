@@ -9,15 +9,10 @@ import (
 	Config "dotcomfy/internal/config"
 )
 
-var dependencies map[string]Config.Dependency
 var errs []error
 
 func InstallDependenciesLinux(config Config.Config) error {
-	dependencies = config.Dependencies
-
-	fmt.Println(dependencies)
-
-	errs := Config.ValidateDependencies(dependencies)
+	errs := config.Validate()
 	if len(errs) > 0 {
 		for _, err := range errs {
 			fmt.Println(err)
@@ -38,8 +33,8 @@ func InstallDependenciesLinux(config Config.Config) error {
 		return err
 	}
 
-	for dependency := range dependencies {
-		e := InstallDependency(dependency, package_manager)
+	for dependency := range config.Dependencies {
+		e := InstallDependency(&dependency, package_manager)
 		if e != nil {
 			errs = append(errs, e...)
 		}

@@ -45,16 +45,14 @@ func CheckPackageManager() (string, error) {
 //
 //   - Create global copy of dependencies so that `Installed` and `FailedInstall`
 //     can be properly tracked across multiple calls of `InstallDependency`.
-func InstallDependency(dependency string, pm string) []error {
-	var d Config.Dependency
+func InstallDependency(d *Config.Dependency, pm string) []error {
 	var needs []string
 	var errs []error
 
-	d = dependencies[dependency]
 	needs = d.Needs
 	if needs != nil {
 		for _, need := range needs {
-			if dependencies[need].FailedInstall {
+			if DEPENDENCIES[need].FailedInstall {
 				err := errors.New("Dependency \"" + need + "\" previously failed to install, skipping \"" + dependency + "\"...")
 				fmt.Println(err)
 				errs = append(errs, err)
