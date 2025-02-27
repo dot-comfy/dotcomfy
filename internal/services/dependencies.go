@@ -3,15 +3,17 @@ package services
 import (
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
+	// "os"
+	// "os/exec"
 
 	Config "dotcomfy/internal/config"
 )
 
 var errs []error
 
-func InstallDependenciesLinux(config Config.Config) error {
+func InstallDependenciesLinux() error {
+	Config.SetConfig()
+	config := Config.GetConfig()
 	errs := config.Validate()
 	if len(errs) > 0 {
 		for _, err := range errs {
@@ -21,20 +23,30 @@ func InstallDependenciesLinux(config Config.Config) error {
 	}
 
 	package_manager, err := CheckPackageManager()
-
-	fmt.Println("Please enter your password to install dependencies...")
-	cmd := exec.Command("sudo", "-S", os.Args[0])
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
 	if err != nil {
-		fmt.Println("Error running with sudo:", err)
+		fmt.Println("Error getting package manager:", err)
 		return err
 	}
 
+	fmt.Println("Please enter your password to install dependencies...")
+	// cmd := exec.Command("sudo", "-S", os.Args[0])
+	// cmd.Stdin = os.Stdin
+	// cmd.Stdout = os.Stdout
+	// cmd.Stderr = os.Stderr
+	// err = cmd.Run()
+	// if err != nil {
+	// 	fmt.Println("Error running with sudo:", err)
+	// 	return err
+	// }
+	fmt.Println(config.Dependencies)
+
 	for dependency := range config.Dependencies {
-		e := InstallDependency(&dependency, package_manager)
+		fmt.Println(dependency)
+		d, err := Config.GetDependency(dependency)
+		if err != nil {
+			fmt.Println(err)
+		}
+		e := InstallDependency(d, package_manager)
 		if e != nil {
 			errs = append(errs, e...)
 		}

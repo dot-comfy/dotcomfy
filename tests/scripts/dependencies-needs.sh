@@ -4,4 +4,12 @@
 
 set -xeuv
 
+which fzf || true
+which tmux || true
+which zig || true
+which nvm || true
 ./bin/dotcomfy install ethangamma24 --branch dotcomfy-dependency-needs
+which fzf || true
+which tmux || true
+which zig || true
+which nvm || true

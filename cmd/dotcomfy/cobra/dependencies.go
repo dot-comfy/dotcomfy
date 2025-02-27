@@ -5,7 +5,6 @@ package cobra
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -25,44 +24,6 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if all {
-			allDependencies()
-			os.Exit(0)
-		}
-
-		dependency := args[0]
-
-		dependency_map, err := config.GetDependency(dependency)
-
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		for k, v := range dependency_map {
-			switch k {
-			case "version":
-				fmt.Printf("Version: %s\n", v)
-			case "steps":
-				for i, step := range v.([]interface{}) {
-					fmt.Printf("Step %d: %s\n", i, step)
-				}
-			case "post_install_steps":
-				for i, step := range v.([]interface{}) {
-					fmt.Printf("Post install Step %d: %s\n", i, step)
-				}
-			case "script":
-				fmt.Printf("Script location: %s\n", v)
-			case "post_install_script":
-				fmt.Printf("Post install Script location: %s\n", v)
-			default:
-				fmt.Printf("Unknown key: %s\n", k)
-			}
-		}
-
-		if len(dependency_map) == 0 {
-			fmt.Println("Installing package at latest version from package manager")
-		}
 	},
 }
 

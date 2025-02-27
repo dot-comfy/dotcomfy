@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
+
+	Config "dotcomfy/internal/config"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -54,4 +56,5 @@ func initConfig() {
 
 		CFG_FILE = cfg + "/dotcomfy/config.toml"
 	}
+	Config.SetConfig()
 }

@@ -14,7 +14,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	Config "dotcomfy/internal/config"
 	"dotcomfy/internal/services"
 )
 
@@ -93,10 +92,7 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	if !skip_dependencies {
-		var config Config.Config
-		config = Config.GetConfig()
-
-		err = services.InstallDependenciesLinux(config)
+		err = services.InstallDependenciesLinux()
 
 		if err != nil {
 			fmt.Println(err)

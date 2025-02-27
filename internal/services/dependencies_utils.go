@@ -46,19 +46,28 @@ func CheckPackageManager() (string, error) {
 //   - Create global copy of dependencies so that `Installed` and `FailedInstall`
 //     can be properly tracked across multiple calls of `InstallDependency`.
 func InstallDependency(d *Config.Dependency, pm string) []error {
+	fmt.Println("Entered InstallDependency()")
 	var needs []string
 	var errs []error
 
 	needs = d.Needs
 	if needs != nil {
 		for _, need := range needs {
-			if DEPENDENCIES[need].FailedInstall {
-				err := errors.New("Dependency \"" + need + "\" previously failed to install, skipping \"" + dependency + "\"...")
+			n, error := Config.GetDependency(need)
+			if error != nil {
+				fmt.Println(error)
+				err := errors.New("Error getting dependency \"" + need + "\"...")
 				fmt.Println(err)
 				errs = append(errs, err)
 				return errs
 			}
-			err := InstallDependency(need, pm)
+			if n.FailedInstall {
+				err := errors.New("Dependency \"" + need + "\" previously failed to install, skipping \"" + d.Name + "\"...")
+				fmt.Println(err)
+				errs = append(errs, err)
+				return errs
+			}
+			err := InstallDependency(n, pm)
 			if err != nil {
 				errs = append(errs, err...)
 			}
@@ -68,23 +77,23 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 	if d.Installed {
 		return errs
 	} else if d.FailedInstall {
-		err := errors.New("Dependency \"" + dependency + "\" previously failed to install, skipping...")
+		err := errors.New("Dependency \"" + d.Name + "\" previously failed to install, skipping...")
 		fmt.Println(err)
 		errs = append(errs, err)
 		return errs
 	} else if d.Version != "" {
-		fmt.Println("Installing dependency \"" + dependency + "\"...")
-		err := InstallPackage(pm, dependency, d.Version)
+		fmt.Println("Installing dependency \"" + d.Name + "\"...")
+		err := InstallPackage(pm, d.Name, d.Version)
 		if err != nil {
 			d.FailedInstall = true
-			fmt.Println("Dependency \"" + dependency + "\" failed to install from package manager...")
+			fmt.Println("Dependency \"" + d.Name + "\" failed to install from package manager...")
 			errs = append(errs, err)
 		}
 		if d.PostInstallSteps != nil {
 			err := HandleSteps(d.PostInstallSteps)
 			if err != nil {
 				d.FailedInstall = true
-				fmt.Println("Dependency \"" + dependency + "\" failed during the post install steps...")
+				fmt.Println("Dependency \"" + d.Name + "\" failed during the post install steps...")
 				errs = append(errs, err)
 				return errs
 			}
@@ -93,12 +102,12 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 		}
 		d.Installed = true
 	} else {
-		fmt.Println("Installing dependency \"" + dependency + "\"...")
+		fmt.Println("Installing dependency \"" + d.Name + "\"...")
 		if d.Steps != nil {
 			err := HandleSteps(d.Steps)
 			if err != nil {
 				d.FailedInstall = true
-				fmt.Println("Dependency \"" + dependency + "\" failed during the install steps...")
+				fmt.Println("Dependency \"" + d.Name + "\" failed during the install steps...")
 				errs = append(errs, err)
 				return errs
 			}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/spf13/viper"
 )
@@ -15,9 +16,10 @@ type Config struct {
 // TODO: Add "needs" cyclical dependency check
 func (c *Config) Validate() []error {
 	dependencies := c.Dependencies
+	fmt.Println(dependencies)
 	errs := []error{}
 	for dependency := range dependencies {
-		d, err := c.GetDependency(dependency)
+		d, err := GetDependency(dependency)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -42,8 +44,11 @@ func (c *Config) Validate() []error {
 	return errs
 }
 
-func (c *Config) GetDependency(name string) (*Dependency, error) {
+func GetDependency(name string) (*Dependency, error) {
+	c := GetConfig()
+	fmt.Println("GetConfig from GetDependency:", c)
 	for _, d := range c.Dependencies {
+		fmt.Printf("Comparing %s to %s...\n", d.Name, name)
 		if d.Name == name {
 			return &d, nil
 		}
@@ -51,9 +56,13 @@ func (c *Config) GetDependency(name string) (*Dependency, error) {
 	return nil, errors.New(fmt.Sprintf("Dependency \"%s\" not found", name))
 }
 
+// TODO:
+//
+// Need to figure out why this isn't setting the names
 func (c *Config) SetDependencyNames() {
 	for name, dependency := range c.Dependencies {
 		dependency.Name = name
+		fmt.Println(dependency.Name)
 	}
 }
 
@@ -126,7 +135,10 @@ func SetConfig() {
 		os.Exit(1)
 	}
 	viper.AddConfigPath(cfg + "/dotcomfy/") // Config file lives in $HOME/.config/dotcomfy/
-	viper.SetConfigName("config")
+	command := exec.Command("ls" + cfg + "/dotcomfy/")
+	output, _ := command.CombinedOutput()
+	fmt.Println(string(output))
+	viper.SetConfigName("config.toml")
 	viper.SetConfigType("toml")
 	err = viper.ReadInConfig()
 	if err != nil {
@@ -134,10 +146,11 @@ func SetConfig() {
 	}
 	viper.Unmarshal(&config)
 	config.SetDependencyNames()
+	fmt.Println(config)
 }
 
-func GetConfig() Config {
-	return config
+func GetConfig() *Config {
+	return &config
 }
 
 func GetDependencies() map[string]string {
