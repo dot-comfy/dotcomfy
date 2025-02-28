@@ -28,7 +28,7 @@ func InstallDependenciesLinux() error {
 		return err
 	}
 
-	fmt.Println("Please enter your password to install dependencies...")
+	// fmt.Println("Please enter your password to install dependencies...")
 	// cmd := exec.Command("sudo", "-S", os.Args[0])
 	// cmd.Stdin = os.Stdin
 	// cmd.Stdout = os.Stdout

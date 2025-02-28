@@ -46,9 +46,7 @@ func (c *Config) Validate() []error {
 
 func GetDependency(name string) (*Dependency, error) {
 	c := GetConfig()
-	fmt.Println("GetConfig from GetDependency:", c)
 	for _, d := range c.Dependencies {
-		fmt.Printf("Comparing %s to %s...\n", d.Name, name)
 		if d.Name == name {
 			return &d, nil
 		}
@@ -56,14 +54,14 @@ func GetDependency(name string) (*Dependency, error) {
 	return nil, errors.New(fmt.Sprintf("Dependency \"%s\" not found", name))
 }
 
-// TODO:
-//
-// Need to figure out why this isn't setting the names
 func (c *Config) SetDependencyNames() {
+	newDependencies := make(map[string]Dependency)
 	for name, dependency := range c.Dependencies {
-		dependency.Name = name
-		fmt.Println(dependency.Name)
+		d := dependency
+		d.Name = name
+		newDependencies[name] = d
 	}
+	c.Dependencies = newDependencies
 }
 
 type Dependency struct {
@@ -146,7 +144,6 @@ func SetConfig() {
 	}
 	viper.Unmarshal(&config)
 	config.SetDependencyNames()
-	fmt.Println(config)
 }
 
 func GetConfig() *Config {
