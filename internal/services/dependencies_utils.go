@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
 
 	Config "dotcomfy/internal/config"
@@ -41,12 +40,7 @@ func CheckPackageManager() (string, error) {
 	}
 }
 
-// TODO:
-//
-//   - Create global copy of dependencies so that `Installed` and `FailedInstall`
-//     can be properly tracked across multiple calls of `InstallDependency`.
 func InstallDependency(d *Config.Dependency, pm string) []error {
-	fmt.Println("Entered InstallDependency()")
 	var needs []string
 	var errs []error
 
@@ -82,7 +76,6 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 		errs = append(errs, err)
 		return errs
 	} else if d.Version != "" {
-		fmt.Println("Installing dependency \"" + d.Name + "\"...")
 		err := InstallPackage(pm, d.Name, d.Version)
 		if err != nil {
 			d.FailedInstall = true
@@ -132,7 +125,6 @@ func InstallPackage(pm string, pkg string, version string) error {
 			pkg = pkg + "-" + version
 		}
 		cmd := fmt.Sprintf("sudo -S dnf install %s -y --skip-unavailable", pkg)
-		fmt.Fprintf(os.Stderr, "DEBUGPRINT: dependencies_utils.go:122: cmd=%+v\n", cmd)
 		command := exec.Command("/bin/sh", "-c", cmd)
 		_, err := command.CombinedOutput()
 		return err

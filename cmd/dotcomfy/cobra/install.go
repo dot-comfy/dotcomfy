@@ -67,7 +67,9 @@ func run(cmd *cobra.Command, args []string) {
 	} else {
 		url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
 		err = services.Clone(url, BRANCH, dotcomfy_dir)
-		fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:65: err=%+v\n", err)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:65: err=%+v\n", err)
+		}
 
 		if err != nil {
 			fmt.Println(err)

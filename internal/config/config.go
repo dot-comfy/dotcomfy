@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 
 	"github.com/spf13/viper"
 )
@@ -16,7 +15,6 @@ type Config struct {
 // TODO: Add "needs" cyclical dependency check
 func (c *Config) Validate() []error {
 	dependencies := c.Dependencies
-	fmt.Println(dependencies)
 	errs := []error{}
 	for dependency := range dependencies {
 		d, err := GetDependency(dependency)
@@ -133,9 +131,6 @@ func SetConfig() {
 		os.Exit(1)
 	}
 	viper.AddConfigPath(cfg + "/dotcomfy/") // Config file lives in $HOME/.config/dotcomfy/
-	command := exec.Command("ls" + cfg + "/dotcomfy/")
-	output, _ := command.CombinedOutput()
-	fmt.Println(string(output))
 	viper.SetConfigName("config.toml")
 	viper.SetConfigType("toml")
 	err = viper.ReadInConfig()
