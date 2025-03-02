@@ -31,12 +31,24 @@ func (c *Config) Validate() []error {
 
 		if version != "" && steps != nil {
 			errs = append(errs, errors.New("Dependency \""+dependency+"\" cannot have both \"version\" and \"steps\""))
-		} else if version != "" && script != "" {
+		}
+		if version != "" && script != "" {
 			errs = append(errs, errors.New("Dependency \""+dependency+"\" cannot have both \"version\" and \"script\""))
-		} else if steps != nil && script != "" {
+		}
+		if steps != nil && script != "" {
 			errs = append(errs, errors.New("Dependency \""+dependency+"\" cannot have both \"steps\" and \"script\""))
-		} else if post_install_steps != nil && post_install_script != "" {
+		}
+		if post_install_steps != nil && post_install_script != "" {
 			errs = append(errs, errors.New("Dependency \""+dependency+"\" cannot have both \"post_install_steps\" and \"post_install_script\""))
+		}
+		if post_install_steps != nil && version == "" {
+			errs = append(errs, errors.New("Dependency \""+dependency+"\" must have \"version\" if using \"post_install_steps\""))
+		}
+		if post_install_script != "" && version == "" {
+			errs = append(errs, errors.New("Dependency \""+dependency+"\" must have \"version\" if using \"post_install_script\""))
+		}
+		if version == "" && script == "" && steps == nil && post_install_steps == nil && post_install_script == "" {
+			errs = append(errs, errors.New("Dependency \""+dependency+"\" must have \"version\" set to \"latest\" or a specific version number"))
 		}
 	}
 	return errs

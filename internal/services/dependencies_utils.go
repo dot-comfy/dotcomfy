@@ -44,9 +44,13 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 	var needs []string
 	var errs []error
 
+	fmt.Println("Dependency \""+d.Name+"\" already installed:", d.GetInstalled())
+	fmt.Println("Dependency \""+d.Name+"\" previously failed install:", d.GetFailedInstall())
+
 	needs = d.Needs
 	if needs != nil {
 		for _, need := range needs {
+			fmt.Println("Need dependency \"" + need + "\" to install \"" + d.Name + "\"...")
 			n, error := Config.GetDependency(need)
 			if error != nil {
 				fmt.Println(error)
@@ -70,22 +74,31 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 
 	if d.Installed {
 		return errs
-	} else if d.FailedInstall {
+	} else if d.GetFailedInstall() {
 		err := errors.New("Dependency \"" + d.Name + "\" previously failed to install, skipping...")
 		fmt.Println(err)
 		errs = append(errs, err)
 		return errs
 	} else if d.Version != "" {
-		err := InstallPackage(pm, d.Name, d.Version)
-		if err != nil {
-			d.FailedInstall = true
-			fmt.Println("Dependency \"" + d.Name + "\" failed to install from package manager...")
-			errs = append(errs, err)
+		if d.Version == "latest" {
+			err := InstallPackage(pm, d.Name, "")
+			if err != nil {
+				d.SetFailedInstall()
+				fmt.Println("Dependency \"" + d.Name + "\" failed to install from package manager...")
+				errs = append(errs, err)
+			}
+		} else {
+			err := InstallPackage(pm, d.Name, d.Version)
+			if err != nil {
+				d.SetFailedInstall()
+				fmt.Println("Dependency \"" + d.Name + "\" failed to install from package manager...")
+				errs = append(errs, err)
+			}
 		}
 		if d.PostInstallSteps != nil {
 			err := HandleSteps(d.PostInstallSteps)
 			if err != nil {
-				d.FailedInstall = true
+				d.SetFailedInstall()
 				fmt.Println("Dependency \"" + d.Name + "\" failed during the post install steps...")
 				errs = append(errs, err)
 				return errs
@@ -93,13 +106,13 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 		} else if d.PostInstallScript != "" {
 			// TODO: Handle post install script
 		}
-		d.Installed = true
+		d.SetInstalled()
 	} else {
 		fmt.Println("Installing dependency \"" + d.Name + "\"...")
 		if d.Steps != nil {
 			err := HandleSteps(d.Steps)
 			if err != nil {
-				d.FailedInstall = true
+				d.SetFailedInstall()
 				fmt.Println("Dependency \"" + d.Name + "\" failed during the install steps...")
 				errs = append(errs, err)
 				return errs
@@ -107,12 +120,13 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 		} else {
 			// TODO: Handle script
 		}
-		d.Installed = true
+		d.SetInstalled()
 	}
 	return errs
 }
 
 func InstallPackage(pm string, pkg string, version string) error {
+	fmt.Println("Installing package \"" + pkg + "\" from package manager " + pm + " ...")
 	switch pm {
 	case "apt":
 		if version != "" {
@@ -126,7 +140,8 @@ func InstallPackage(pm string, pkg string, version string) error {
 		}
 		cmd := fmt.Sprintf("sudo -S dnf install %s -y --skip-unavailable", pkg)
 		command := exec.Command("/bin/sh", "-c", cmd)
-		_, err := command.CombinedOutput()
+		output, err := command.CombinedOutput()
+		fmt.Println(string(output))
 		return err
 	case "yum":
 		if version != "" {
