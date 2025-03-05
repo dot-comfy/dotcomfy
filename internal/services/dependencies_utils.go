@@ -91,7 +91,6 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 			if err != nil {
 				d.SetFailedInstall()
 				fmt.Println("Dependency \"" + d.Name + "\" failed to install from package manager...")
-				LOGGER.Error(err)
 				errs = append(errs, err)
 			}
 		} else {
@@ -99,7 +98,6 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 			if err != nil {
 				d.SetFailedInstall()
 				fmt.Println("Dependency \"" + d.Name + "\" failed to install from package manager...")
-				LOGGER.Error(err)
 				errs = append(errs, err)
 			}
 		}
@@ -107,7 +105,6 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 			err := HandleSteps(d.PostInstallSteps)
 			if err != nil {
 				d.SetFailedInstall()
-				LOGGER.Error(err)
 				fmt.Println("Dependency \"" + d.Name + "\" failed during the post install steps...")
 				errs = append(errs, err)
 				return errs
@@ -122,7 +119,6 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 			err := HandleSteps(d.Steps)
 			if err != nil {
 				d.SetFailedInstall()
-				LOGGER.Error(err)
 				fmt.Println("Dependency \"" + d.Name + "\" failed during the install steps...")
 				errs = append(errs, err)
 				return errs

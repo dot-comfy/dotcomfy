@@ -142,14 +142,14 @@ func SetConfig() {
 	LOGGER := Log.GetLogger()
 	cfg, err := os.UserConfigDir()
 	if err != nil {
-		LOGGER.Fatalf("config.go:27: err=%+v\n", err)
+		LOGGER.Fatal(err)
 	}
 	viper.AddConfigPath(cfg + "/dotcomfy/") // Config file lives in $HOME/.config/dotcomfy/
 	viper.SetConfigName("config.toml")
 	viper.SetConfigType("toml")
 	err = viper.ReadInConfig()
 	if err != nil {
-		LOGGER.Errorf("config.go:29: err=%+v\n", err)
+		LOGGER.Error(err)
 	}
 	viper.Unmarshal(&config)
 	config.SetDependencyNames()

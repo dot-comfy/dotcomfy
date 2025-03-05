@@ -9,7 +9,10 @@ import (
 var l *log.Logger
 
 func Init(verbosity int) {
-	l = log.New(os.Stderr)
+	l = log.NewWithOptions(os.Stderr, log.Options{
+		ReportCaller:    true,
+		ReportTimestamp: true,
+	})
 	if verbosity > 3 {
 		verbosity = 3
 	}
