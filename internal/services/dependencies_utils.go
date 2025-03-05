@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	Config "dotcomfy/internal/config"
+	Log "dotcomfy/internal/logger"
 )
 
 /*
@@ -41,6 +42,7 @@ func CheckPackageManager() (string, error) {
 }
 
 func InstallDependency(d *Config.Dependency, pm string) []error {
+	LOGGER = Log.GetLogger()
 	var needs []string
 	var errs []error
 
@@ -126,6 +128,7 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 }
 
 func InstallPackage(pm string, pkg string, version string) error {
+	LOGGER = Log.GetLogger()
 	fmt.Println("Installing package \"" + pkg + "\" from package manager " + pm + " ...")
 	switch pm {
 	case "apt":

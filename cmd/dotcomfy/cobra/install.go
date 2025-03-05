@@ -14,6 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	Log "dotcomfy/internal/logger"
 	"dotcomfy/internal/services"
 )
 
@@ -31,6 +32,7 @@ var installCmd = &cobra.Command{
 }
 
 func run(cmd *cobra.Command, args []string) {
+	LOGGER = Log.GetLogger()
 	user, err := user.Current()
 	if err != nil {
 		fmt.Println(err)
@@ -47,7 +49,7 @@ func run(cmd *cobra.Command, args []string) {
 
 	os.MkdirAll(dotcomfy_dir, 0755)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:47: err=%+v\n", err)
+		LOGGER.Errorf("DEBUGPRINT: install.go:47: err=%+v\n", err)
 		os.Exit(1)
 	}
 
@@ -61,43 +63,45 @@ func run(cmd *cobra.Command, args []string) {
 		err = services.Clone(url, BRANCH, dotcomfy_dir)
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:58: err=%+v\n", err)
+			LOGGER.Errorf("DEBUGPRINT: install.go:69: err=%+v\n", err)
 			os.Exit(1)
 		}
 	} else {
 		url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
 		err = services.Clone(url, BRANCH, dotcomfy_dir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:65: err=%+v\n", err)
+			LOGGER.Errorf("DEBUGPRINT: install.go:76: err=%+v\n", err)
 		}
 
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			LOGGER.Fatal(err)
 		}
 	}
 
 	// Walk through the cloned repo and perform rename/symlink operations
 	err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "DEBUGPRINT: install.go:78: err=%+v\n", err)
+			LOGGER.Error("DEBUGPRINT: install.go:87: err=%+v\n", err)
 			return err
 		}
 
 		if !d.IsDir() && !strings.Contains(path, ".git") && !strings.Contains(path, "README.md") {
 			_, err = services.RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, path)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	})
 	if err != nil {
-		fmt.Println(err)
+		LOGGER.Error(err)
 	}
 
 	if !skip_dependencies {
 		err = services.InstallDependenciesLinux()
 
 		if err != nil {
-			fmt.Println(err)
+			LOGGER.Error(err)
 		}
 	}
 

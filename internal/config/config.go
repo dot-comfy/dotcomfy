@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"github.com/spf13/viper"
+
+	Log "dotcomfy/internal/logger"
 )
 
 type Config struct {
@@ -137,17 +139,17 @@ func (d *Dependency) GetFailedInstall() bool {
 var config Config
 
 func SetConfig() {
+	LOGGER := Log.GetLogger()
 	cfg, err := os.UserConfigDir()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "DEBUGPRINT: config.go:27: err=%+v\n", err)
-		os.Exit(1)
+		LOGGER.Fatalf("config.go:27: err=%+v\n", err)
 	}
 	viper.AddConfigPath(cfg + "/dotcomfy/") // Config file lives in $HOME/.config/dotcomfy/
 	viper.SetConfigName("config.toml")
 	viper.SetConfigType("toml")
 	err = viper.ReadInConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "DEBUGPRINT: config.go:29: err=%+v\n", err)
+		LOGGER.Errorf("config.go:29: err=%+v\n", err)
 	}
 	viper.Unmarshal(&config)
 	config.SetDependencyNames()
