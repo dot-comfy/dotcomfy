@@ -58,6 +58,6 @@ func initConfig() {
 
 		CFG_FILE = cfg + "/dotcomfy/config.toml"
 	}
-	Config.SetConfig()
 	Log.Init(VERBOSITY)
+	Config.SetConfig()
 }

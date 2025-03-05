@@ -49,7 +49,7 @@ var uninstallCmd = &cobra.Command{
 		// Delete symlinks and rename ".pre-dotcomfy" files back to their old names
 		err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				LOGGER.Errorf("uninstall.go:51: err=%+v\n", err)
+				LOGGER.Error(err)
 				return err
 			}
 			if !d.IsDir() {
@@ -61,18 +61,18 @@ var uninstallCmd = &cobra.Command{
 						// Remove symlink
 						err = os.Remove(old_path)
 						if err != nil {
-							LOGGER.Errorf("uninstall.go:63: err=%+v\n", err)
+							LOGGER.Error(err)
 							return err
 						}
 						err = os.Rename(old_path, old_name)
 						if err != nil {
-							LOGGER.Errorf("uninstall.go:68: err=%+v\n", err)
+							LOGGER.Error(err)
 							return err
 						}
 					} else { // Just remove symlink
 						err = os.Remove(old_path)
 						if err != nil {
-							LOGGER.Errorf("uninstall.go:74: err=%+v\n", err)
+							LOGGER.Error(err)
 							return err
 						}
 					}
@@ -91,14 +91,14 @@ var uninstallCmd = &cobra.Command{
 		// Delete everything in ~/.dotcomfy
 		dir, err := os.Open(dotcomfy_dir)
 		if err != nil {
-			LOGGER.Errorf("uninstall.go:93: err=%+v\n", err)
+			LOGGER.Error(err)
 			os.Exit(1)
 		}
 		defer dir.Close()
 
 		names, err := dir.Readdirnames(-1)
 		if err != nil {
-			LOGGER.Errorf("uninstall.go:100: err=%+v\n", err)
+			LOGGER.Error(err)
 			os.Exit(1)
 		}
 
@@ -110,20 +110,20 @@ var uninstallCmd = &cobra.Command{
 
 			file_info, err := os.Stat(file_path)
 			if err != nil {
-				LOGGER.Errorf("uninstall.go:112: err=%+v\n", err)
+				LOGGER.Error(err)
 				os.Exit(1)
 			}
 
 			if file_info.IsDir() {
 				err = os.RemoveAll(file_path)
 				if err != nil {
-					LOGGER.Errorf("uninstall.go:119: err=%+v\n", err)
+					LOGGER.Error(err)
 					continue
 				}
 			} else {
 				err = os.Remove(file_path)
 				if err != nil {
-					LOGGER.Errorf("uninstall.go:125: err=%+v\n", err)
+					LOGGER.Error(err)
 					continue
 				}
 			}

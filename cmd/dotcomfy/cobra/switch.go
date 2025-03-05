@@ -6,7 +6,6 @@ package cobra
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -48,12 +47,12 @@ var switchCmd = &cobra.Command{
 		if REPO == "" && BRANCH != "" {
 			r, err := git.PlainOpen(dotcomfy_dir)
 			if err != nil {
-				LOGGER.Errorf("switch.go:44: err=%+v\n", err)
+				LOGGER.Error(err)
 			}
 
 			remote, err := r.Remote("origin")
 			if err != nil {
-				LOGGER.Errorf("switch.go:49: err=%+v\n", err)
+				LOGGER.Error(err)
 			}
 
 			urls := remote.Config().URLs
@@ -65,7 +64,7 @@ var switchCmd = &cobra.Command{
 
 			err = switchDotfiles(dotcomfy_dir, old_dotfiles_dir, repo_url, BRANCH)
 			if err != nil {
-				LOGGER.Fatalf("switch.go:61: err=%+v\n", err)
+				LOGGER.Fatal(err)
 			}
 		} else { // Changing to different repo
 			if strings.Contains(REPO, "https://") {
@@ -77,10 +76,10 @@ var switchCmd = &cobra.Command{
 			} else {
 				repo_url = fmt.Sprintf("https://github.com/%s/dotfiles.git", REPO)
 			}
-			LOGGER.Errorf("switch.go:79: repo_url=%+v\n", repo_url)
+			LOGGER.Error(err)
 			err = switchDotfiles(dotcomfy_dir, old_dotfiles_dir, repo_url, BRANCH)
 			if err != nil {
-				LOGGER.Fatalf("switch.go:67: err=%+v\n", err)
+				LOGGER.Fatal(err)
 			}
 		}
 	},
@@ -90,21 +89,21 @@ func switchDotfiles(dotcomfy_dir, old_dotfiles_dir, url, branch string) error {
 	// Perform uninstall
 	err := services.RemoveInstallation(dotcomfy_dir, old_dotfiles_dir)
 	if err != nil {
-		LOGGER.Errorf("switch.go:92: err=%+v\n", err)
+		LOGGER.Error(err)
 		return err
 	}
 
 	// Perform install
 	err = services.Clone(url, branch, dotcomfy_dir)
 	if err != nil {
-		LOGGER.Errorf("switch.go:99: err=%+v\n", err)
+		LOGGER.Error(err)
 		return err
 	}
 
 	// Walk through the cloned repo and perform rename/symlink operations
 	err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			LOGGER.Errorf("switch.go:106: err=%+v\n", err)
+			LOGGER.Error(err)
 			return err
 		}
 
@@ -112,7 +111,7 @@ func switchDotfiles(dotcomfy_dir, old_dotfiles_dir, url, branch string) error {
 			if !strings.Contains(path, ".git") && !strings.Contains(path, dotcomfy_dir+"README.md") {
 				_, err = services.RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, path)
 				if err != nil {
-					LOGGER.Errorf("switch.go:114: err=%+v\n", err)
+					LOGGER.Error(err)
 					return err
 				}
 			}
@@ -120,7 +119,7 @@ func switchDotfiles(dotcomfy_dir, old_dotfiles_dir, url, branch string) error {
 		return nil
 	})
 	if err != nil {
-		LOGGER.Errorf("switch.go:122: err=%+v\n", err)
+		LOGGER.Error(err)
 		return err
 	}
 	return nil

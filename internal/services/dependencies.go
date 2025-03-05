@@ -2,7 +2,6 @@ package services
 
 import (
 	"errors"
-	"fmt"
 
 	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"

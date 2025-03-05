@@ -49,7 +49,7 @@ func run(cmd *cobra.Command, args []string) {
 
 	os.MkdirAll(dotcomfy_dir, 0755)
 	if err != nil {
-		LOGGER.Errorf("DEBUGPRINT: install.go:47: err=%+v\n", err)
+		LOGGER.Error(err)
 		os.Exit(1)
 	}
 
@@ -63,14 +63,14 @@ func run(cmd *cobra.Command, args []string) {
 		err = services.Clone(url, BRANCH, dotcomfy_dir)
 
 		if err != nil {
-			LOGGER.Errorf("DEBUGPRINT: install.go:69: err=%+v\n", err)
+			LOGGER.Error(err)
 			os.Exit(1)
 		}
 	} else {
 		url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
 		err = services.Clone(url, BRANCH, dotcomfy_dir)
 		if err != nil {
-			LOGGER.Errorf("DEBUGPRINT: install.go:76: err=%+v\n", err)
+			LOGGER.Error(err)
 		}
 
 		if err != nil {
@@ -81,13 +81,14 @@ func run(cmd *cobra.Command, args []string) {
 	// Walk through the cloned repo and perform rename/symlink operations
 	err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			LOGGER.Error("DEBUGPRINT: install.go:87: err=%+v\n", err)
+			LOGGER.Error(err)
 			return err
 		}
 
 		if !d.IsDir() && !strings.Contains(path, ".git") && !strings.Contains(path, "README.md") {
 			_, err = services.RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, path)
 			if err != nil {
+				LOGGER.Error(err)
 				return err
 			}
 		}

@@ -56,14 +56,17 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 			n, error := Config.GetDependency(need)
 			if error != nil {
 				fmt.Println(error)
+				LOGGER.Error(error)
 				err := errors.New("Error getting dependency \"" + need + "\"...")
 				fmt.Println(err)
+				LOGGER.Error(err)
 				errs = append(errs, err)
 				return errs
 			}
 			if n.FailedInstall {
 				err := errors.New("Dependency \"" + need + "\" previously failed to install, skipping \"" + d.Name + "\"...")
 				fmt.Println(err)
+				LOGGER.Error(err)
 				errs = append(errs, err)
 				return errs
 			}
@@ -79,6 +82,7 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 	} else if d.GetFailedInstall() {
 		err := errors.New("Dependency \"" + d.Name + "\" previously failed to install, skipping...")
 		fmt.Println(err)
+		LOGGER.Error(err)
 		errs = append(errs, err)
 		return errs
 	} else if d.Version != "" {
@@ -130,6 +134,7 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 func InstallPackage(pm string, pkg string, version string) error {
 	LOGGER = Log.GetLogger()
 	fmt.Println("Installing package \"" + pkg + "\" from package manager " + pm + " ...")
+	LOGGER.Info("Installing package \"" + pkg + "\" from package manager " + pm + " ...")
 	switch pm {
 	case "apt":
 		if version != "" {
@@ -145,6 +150,7 @@ func InstallPackage(pm string, pkg string, version string) error {
 		command := exec.Command("/bin/sh", "-c", cmd)
 		output, err := command.CombinedOutput()
 		fmt.Println(string(output))
+		LOGGER.Info(string(output))
 		return err
 	case "yum":
 		if version != "" {
@@ -182,6 +188,7 @@ func HandleSteps(steps []string) error {
 		cmd := exec.Command("/bin/sh", "-c", step)
 		output, err := cmd.CombinedOutput()
 		fmt.Println(string(output))
+		LOGGER.Info(string(output))
 		if err != nil {
 			return err
 		}
