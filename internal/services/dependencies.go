@@ -2,29 +2,28 @@ package services
 
 import (
 	"errors"
-	"fmt"
-	// "os"
-	// "os/exec"
 
 	Config "dotcomfy/internal/config"
+	Log "dotcomfy/internal/logger"
 )
 
 var errs []error
 
 func InstallDependenciesLinux() error {
+	LOGGER = Log.GetLogger()
 	Config.SetConfig()
 	config := Config.GetConfig()
 	errs := config.Validate()
 	if len(errs) > 0 {
 		for _, err := range errs {
-			fmt.Println(err)
+			LOGGER.Error(err)
 		}
 		return errors.New("Invalid config file")
 	}
 
 	package_manager, err := CheckPackageManager()
 	if err != nil {
-		fmt.Println("Error getting package manager:", err)
+		LOGGER.Errorf("Error getting package manager: %s", err)
 		return err
 	}
 
@@ -42,7 +41,7 @@ func InstallDependenciesLinux() error {
 	for dependency := range config.Dependencies {
 		d, err := Config.GetDependency(dependency)
 		if err != nil {
-			fmt.Println(err)
+			LOGGER.Error(err)
 		}
 		e := InstallDependency(d, package_manager)
 		if e != nil {

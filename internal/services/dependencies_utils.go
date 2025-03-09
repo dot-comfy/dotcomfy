@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	Config "dotcomfy/internal/config"
+	Log "dotcomfy/internal/logger"
 )
 
 /*
@@ -41,27 +42,31 @@ func CheckPackageManager() (string, error) {
 }
 
 func InstallDependency(d *Config.Dependency, pm string) []error {
+	LOGGER = Log.GetLogger()
 	var needs []string
 	var errs []error
 
-	fmt.Println("Dependency \""+d.Name+"\" already installed:", d.GetInstalled())
-	fmt.Println("Dependency \""+d.Name+"\" previously failed install:", d.GetFailedInstall())
+	LOGGER.Info("Dependency \""+d.Name+"\" already installed:", d.GetInstalled())
+	LOGGER.Info("Dependency \""+d.Name+"\" previously failed install:", d.GetFailedInstall())
 
 	needs = d.Needs
 	if needs != nil {
 		for _, need := range needs {
-			fmt.Println("Need dependency \"" + need + "\" to install \"" + d.Name + "\"...")
+			LOGGER.Info("Need dependency \"" + need + "\" to install \"" + d.Name + "\"...")
 			n, error := Config.GetDependency(need)
 			if error != nil {
 				fmt.Println(error)
+				LOGGER.Error(error)
 				err := errors.New("Error getting dependency \"" + need + "\"...")
 				fmt.Println(err)
+				LOGGER.Error(err)
 				errs = append(errs, err)
 				return errs
 			}
 			if n.FailedInstall {
 				err := errors.New("Dependency \"" + need + "\" previously failed to install, skipping \"" + d.Name + "\"...")
 				fmt.Println(err)
+				LOGGER.Error(err)
 				errs = append(errs, err)
 				return errs
 			}
@@ -73,10 +78,12 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 	}
 
 	if d.Installed {
+		LOGGER.Info("Dependency \"" + d.Name + "\" already installed, skipping...")
 		return errs
 	} else if d.GetFailedInstall() {
 		err := errors.New("Dependency \"" + d.Name + "\" previously failed to install, skipping...")
 		fmt.Println(err)
+		LOGGER.Error(err)
 		errs = append(errs, err)
 		return errs
 	} else if d.Version != "" {
@@ -126,7 +133,9 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 }
 
 func InstallPackage(pm string, pkg string, version string) error {
+	LOGGER = Log.GetLogger()
 	fmt.Println("Installing package \"" + pkg + "\" from package manager " + pm + " ...")
+	LOGGER.Info("Installing package \"" + pkg + "\" from package manager " + pm + " ...")
 	switch pm {
 	case "apt":
 		if version != "" {
@@ -140,8 +149,9 @@ func InstallPackage(pm string, pkg string, version string) error {
 		}
 		cmd := fmt.Sprintf("sudo -S dnf install %s -y --skip-unavailable", pkg)
 		command := exec.Command("/bin/sh", "-c", cmd)
-		output, err := command.CombinedOutput()
-		fmt.Println(string(output))
+		_, err := command.CombinedOutput()
+		// fmt.Println(string(output))
+		// LOGGER.Info(string(output))
 		return err
 	case "yum":
 		if version != "" {
@@ -177,8 +187,9 @@ func InstallPackage(pm string, pkg string, version string) error {
 func HandleSteps(steps []string) error {
 	for _, step := range steps {
 		cmd := exec.Command("/bin/sh", "-c", step)
-		output, err := cmd.CombinedOutput()
-		fmt.Println(string(output))
+		_, err := cmd.CombinedOutput()
+		// fmt.Println(string(output))
+		// LOGGER.Info(string(output))
 		if err != nil {
 			return err
 		}
