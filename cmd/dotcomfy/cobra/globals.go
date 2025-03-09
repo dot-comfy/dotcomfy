@@ -1,8 +1,17 @@
 package cobra
 
+import (
+	"dotcomfy/internal/config"
+
+	"github.com/charmbracelet/log"
+)
+
 var (
-	branch  string
-	repo    string
-	confirm bool
-	cfgFile string
+	BRANCH    string
+	CONFIRM   bool
+	CFG_FILE  string
+	CONFIG    config.Config
+	REPO      string
+	VERBOSITY int
+	LOGGER    *log.Logger
 )
