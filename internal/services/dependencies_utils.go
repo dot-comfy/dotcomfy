@@ -46,13 +46,13 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 	var needs []string
 	var errs []error
 
-	fmt.Println("Dependency \""+d.Name+"\" already installed:", d.GetInstalled())
-	fmt.Println("Dependency \""+d.Name+"\" previously failed install:", d.GetFailedInstall())
+	LOGGER.Info("Dependency \""+d.Name+"\" already installed:", d.GetInstalled())
+	LOGGER.Info("Dependency \""+d.Name+"\" previously failed install:", d.GetFailedInstall())
 
 	needs = d.Needs
 	if needs != nil {
 		for _, need := range needs {
-			fmt.Println("Need dependency \"" + need + "\" to install \"" + d.Name + "\"...")
+			LOGGER.Info("Need dependency \"" + need + "\" to install \"" + d.Name + "\"...")
 			n, error := Config.GetDependency(need)
 			if error != nil {
 				fmt.Println(error)
@@ -78,6 +78,7 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 	}
 
 	if d.Installed {
+		LOGGER.Info("Dependency \"" + d.Name + "\" already installed, skipping...")
 		return errs
 	} else if d.GetFailedInstall() {
 		err := errors.New("Dependency \"" + d.Name + "\" previously failed to install, skipping...")
@@ -148,9 +149,9 @@ func InstallPackage(pm string, pkg string, version string) error {
 		}
 		cmd := fmt.Sprintf("sudo -S dnf install %s -y --skip-unavailable", pkg)
 		command := exec.Command("/bin/sh", "-c", cmd)
-		output, err := command.CombinedOutput()
-		fmt.Println(string(output))
-		LOGGER.Info(string(output))
+		_, err := command.CombinedOutput()
+		// fmt.Println(string(output))
+		// LOGGER.Info(string(output))
 		return err
 	case "yum":
 		if version != "" {
@@ -186,9 +187,9 @@ func InstallPackage(pm string, pkg string, version string) error {
 func HandleSteps(steps []string) error {
 	for _, step := range steps {
 		cmd := exec.Command("/bin/sh", "-c", step)
-		output, err := cmd.CombinedOutput()
-		fmt.Println(string(output))
-		LOGGER.Info(string(output))
+		_, err := cmd.CombinedOutput()
+		// fmt.Println(string(output))
+		// LOGGER.Info(string(output))
 		if err != nil {
 			return err
 		}

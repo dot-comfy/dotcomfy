@@ -121,7 +121,12 @@ func (d *Dependency) GetVersion() string {
 }
 
 func (d *Dependency) SetInstalled() {
-	d.Installed = true
+	Log.GetLogger().Info("Setting dependency \"" + d.Name + "\" as installed...")
+	c := GetConfig()
+	if dependency, ok := c.Dependencies[d.Name]; ok {
+		dependency.Installed = true
+		c.Dependencies[d.Name] = dependency
+	}
 }
 
 func (d *Dependency) GetInstalled() bool {
@@ -129,14 +134,19 @@ func (d *Dependency) GetInstalled() bool {
 }
 
 func (d *Dependency) SetFailedInstall() {
-	d.FailedInstall = true
+	Log.GetLogger().Info("Setting dependency \"" + d.Name + "\" as failed install...")
+	c := GetConfig()
+	if dependency, ok := c.Dependencies[d.Name]; ok {
+		dependency.FailedInstall = true
+		c.Dependencies[d.Name] = dependency
+	}
 }
 
 func (d *Dependency) GetFailedInstall() bool {
 	return d.FailedInstall
 }
 
-var config Config
+var config *Config
 
 func SetConfig() {
 	LOGGER := Log.GetLogger()
@@ -156,7 +166,7 @@ func SetConfig() {
 }
 
 func GetConfig() *Config {
-	return &config
+	return config
 }
 
 func GetDependencies() map[string]string {
