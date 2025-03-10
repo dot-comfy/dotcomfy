@@ -5,9 +5,15 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"time"
 
 	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
+)
+
+var (
+	done      = false
+	done_chan = make(chan struct{})
 )
 
 /*
@@ -45,9 +51,6 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 	LOGGER = Log.GetLogger()
 	var needs []string
 	var errs []error
-
-	LOGGER.Info("Dependency \""+d.Name+"\" already installed:", d.GetInstalled())
-	LOGGER.Info("Dependency \""+d.Name+"\" previously failed install:", d.GetFailedInstall())
 
 	needs = d.Needs
 	if needs != nil {
@@ -136,12 +139,14 @@ func InstallPackage(pm string, pkg string, version string) error {
 	LOGGER = Log.GetLogger()
 	fmt.Println("Installing package \"" + pkg + "\" from package manager " + pm + " ...")
 	LOGGER.Info("Installing package \"" + pkg + "\" from package manager " + pm + " ...")
+	Progress()
 	switch pm {
 	case "apt":
 		if version != "" {
 			pkg = pkg + "=" + version
 		}
 		err := exec.Command("sudo", "apt", "install", "-y", pkg).Run()
+		done = true
 		return err
 	case "dnf":
 		if version != "" {
@@ -152,12 +157,14 @@ func InstallPackage(pm string, pkg string, version string) error {
 		_, err := command.CombinedOutput()
 		// fmt.Println(string(output))
 		// LOGGER.Info(string(output))
+		done = true
 		return err
 	case "yum":
 		if version != "" {
 			pkg = pkg + "=" + version
 		}
 		err := exec.Command("sudo", "yum", "install", "-y", pkg).Run()
+		done = true
 		return err
 	case "pacman":
 		if version != "" {
@@ -166,25 +173,30 @@ func InstallPackage(pm string, pkg string, version string) error {
 		cmd := fmt.Sprintf("sudo -S pacman -S %s --noconfirm", pkg)
 		command := exec.Command("/bin/sh", "-c", cmd)
 		_, err := command.CombinedOutput()
+		done = true
 		return err
 	case "yay":
 		if version != "" {
 			log.Output(1, "Version not supported for yay")
 		}
 		err := exec.Command("yay", "--noconfirm", pkg).Run()
+		done = true
 		return err
 	case "zypper":
 		if version != "" {
 			pkg = pkg + "=" + version
 		}
 		err := exec.Command("sudo", "zypper", "install", "-y", pkg).Run()
+		done = true
 		return err
 	default:
+		done = true
 		return errors.New("Unknown package manager")
 	}
 }
 
 func HandleSteps(steps []string) error {
+	Progress()
 	for _, step := range steps {
 		cmd := exec.Command("/bin/sh", "-c", step)
 		_, err := cmd.CombinedOutput()
@@ -194,5 +206,26 @@ func HandleSteps(steps []string) error {
 			return err
 		}
 	}
+	done = true
 	return nil
+}
+
+func Progress() {
+	fmt.Println("Entered progress")
+	go func() {
+		for {
+			select {
+			case <-time.After(100 * time.Millisecond):
+				fmt.Print(".")
+				if done == true {
+					close(done_chan)
+					return
+				}
+			case <-done_chan:
+				done = false
+				fmt.Printf(" Done\n")
+				return
+			}
+		}
+	}()
 }
