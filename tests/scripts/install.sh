@@ -25,9 +25,11 @@ which fzf || true
 which tmux || true
 which zig || true
 which nvm || true
+which nvim || true
 ./bin/dotcomfy install ethangamma24 --branch hyprland
 which fzf || true
 which tmux || true
 which zig || true
 which nvm || true
+which nvim || true
 sleep 5

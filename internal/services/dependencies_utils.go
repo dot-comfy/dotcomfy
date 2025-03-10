@@ -1,10 +1,13 @@
 package services
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+	"strings"
 
 	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
@@ -45,9 +48,6 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 	LOGGER = Log.GetLogger()
 	var needs []string
 	var errs []error
-
-	LOGGER.Info("Dependency \""+d.Name+"\" already installed:", d.GetInstalled())
-	LOGGER.Info("Dependency \""+d.Name+"\" previously failed install:", d.GetFailedInstall())
 
 	needs = d.Needs
 	if needs != nil {
@@ -111,7 +111,14 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 				return errs
 			}
 		} else if d.PostInstallScript != "" {
-			// TODO: Handle post install script
+			err := HandleScript(d.PostInstallScript)
+			if err != nil {
+				d.SetFailedInstall()
+				fmt.Println("Dependency \"" + d.Name + "\" failed during the install steps...")
+				LOGGER.Error("Dependency \"" + d.Name + "\" failed during the install steps...")
+				errs = append(errs, err)
+				return errs
+			}
 		}
 		d.SetInstalled()
 	} else {
@@ -121,11 +128,19 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 			if err != nil {
 				d.SetFailedInstall()
 				fmt.Println("Dependency \"" + d.Name + "\" failed during the install steps...")
+				LOGGER.Error("Dependency \"" + d.Name + "\" failed during the install steps...")
 				errs = append(errs, err)
 				return errs
 			}
 		} else {
-			// TODO: Handle script
+			err := HandleScript(d.Script)
+			if err != nil {
+				d.SetFailedInstall()
+				fmt.Println("Dependency \"" + d.Name + "\" failed during the install steps...")
+				LOGGER.Error("Dependency \"" + d.Name + "\" failed during the install steps...")
+				errs = append(errs, err)
+				return errs
+			}
 		}
 		d.SetInstalled()
 	}
@@ -185,11 +200,49 @@ func InstallPackage(pm string, pkg string, version string) error {
 }
 
 func HandleSteps(steps []string) error {
+	LOGGER = Log.GetLogger()
 	for _, step := range steps {
 		cmd := exec.Command("/bin/sh", "-c", step)
 		_, err := cmd.CombinedOutput()
 		// fmt.Println(string(output))
 		// LOGGER.Info(string(output))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func HandleScript(file_name string) error {
+	LOGGER = Log.GetLogger()
+	XDG_CONFIG_HOME, _ := os.UserConfigDir()
+	file, err := os.Open(XDG_CONFIG_HOME + "/dotcomfy/" + file_name)
+	if err != nil {
+		LOGGER.Error("Error opening the file \""+file_name+"\":", err)
+		return err
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+		if line != "" {
+			lines = append(lines, line)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		LOGGER.Error("Error occurred during file scanning:", err)
+	}
+
+	for _, line := range lines {
+		cmd := exec.Command("/bin/sh", "-c", line)
+		output, err := cmd.CombinedOutput()
+		fmt.Println(string(output))
+		LOGGER.Info(string(output))
 		if err != nil {
 			return err
 		}
