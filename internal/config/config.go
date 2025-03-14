@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/viper"
 
@@ -14,7 +15,7 @@ type Config struct {
 	Dependencies map[string]Dependency `toml:"dependencies,omitempty"`
 }
 
-// TODO: Add "needs" cyclical dependency check
+// TODO: Find a way to pull config file down first from the repo if it exists to validate before installation
 func (c *Config) Validate() []error {
 	dependencies := c.Dependencies
 	errs := []error{}
@@ -31,6 +32,7 @@ func (c *Config) Validate() []error {
 		steps := d.GetSteps()
 		script := d.GetScript()
 
+		// Check for conflicting fields
 		if version != "" && steps != nil {
 			errs = append(errs, errors.New("Dependency \""+dependency+"\" cannot have both \"version\" and \"steps\""))
 		}
@@ -52,8 +54,47 @@ func (c *Config) Validate() []error {
 		if version == "" && script == "" && steps == nil && post_install_steps == nil && post_install_script == "" {
 			errs = append(errs, errors.New("Dependency \""+dependency+"\" must have \"version\" set to \"latest\" or a specific version number"))
 		}
+
+		if d.GetNeeds() != nil {
+			for _, n := range d.GetNeeds() {
+				if n == dependency {
+					errs = append(errs, errors.New("Dependency \""+dependency+"\" cannot have itself as a \"need\""))
+				} else {
+					// Check to see if there is a "needs" cycle
+					fmt.Println("Checking dependency \"" + dependency + "\" for a dependency cycle...")
+					cycle, chain := CheckDependencyCycle(dependency, n)
+					chain = append(chain, n)
+					fmt.Println(chain)
+					if cycle {
+						errs = append(errs, errors.New("Dependency \""+dependency+"\" has a dependency cycle: "+strings.Join(chain, " <- ")+" <- "+dependency))
+					}
+				}
+			}
+		}
 	}
 	return errs
+}
+
+func CheckDependencyCycle(dependency string, need string) (bool, []string) {
+	d, err := GetDependency(need)
+	if err != nil {
+		fmt.Println(err)
+		return false, nil
+	}
+	if d.GetNeeds() != nil {
+		for _, n := range d.GetNeeds() {
+			fmt.Println(n)
+			if n == dependency {
+				return true, []string{n}
+			} else {
+				cycle, chain := CheckDependencyCycle(dependency, n)
+				if cycle {
+					return true, append(chain, n)
+				}
+			}
+		}
+	}
+	return false, nil
 }
 
 func GetDependency(name string) (*Dependency, error) {

@@ -203,10 +203,11 @@ func HandleSteps(steps []string) error {
 	LOGGER = Log.GetLogger()
 	for _, step := range steps {
 		cmd := exec.Command("/bin/sh", "-c", step)
-		_, err := cmd.CombinedOutput()
+		output, err := cmd.CombinedOutput()
 		// fmt.Println(string(output))
-		// LOGGER.Info(string(output))
+		LOGGER.Info(string(output))
 		if err != nil {
+			LOGGER.Error(err)
 			return err
 		}
 	}
@@ -241,7 +242,7 @@ func HandleScript(file_name string) error {
 	for _, line := range lines {
 		cmd := exec.Command("/bin/sh", "-c", line)
 		output, err := cmd.CombinedOutput()
-		fmt.Println(string(output))
+		// fmt.Println(string(output))
 		LOGGER.Info(string(output))
 		if err != nil {
 			return err
