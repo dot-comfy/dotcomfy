@@ -16,6 +16,8 @@ RUN dnf install -y which
 USER comfy
 WORKDIR /home/comfy
 
+RUN touch /home/comfy/.zshrc
+
 # Copy the binary into the container
 COPY --chown=comfy:comfy bin/dotcomfy bin/dotcomfy
 COPY --chown=comfy:comfy tests/scripts/* tests/scripts/

@@ -1,13 +1,12 @@
 package services
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
-	"strings"
 
 	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
@@ -217,36 +216,72 @@ func HandleSteps(steps []string) error {
 func HandleScript(file_name string) error {
 	LOGGER = Log.GetLogger()
 	XDG_CONFIG_HOME, _ := os.UserConfigDir()
-	file, err := os.Open(XDG_CONFIG_HOME + "/dotcomfy/" + file_name)
+	/*
+		file, err := os.Open(XDG_CONFIG_HOME + "/dotcomfy/" + file_name)
+		if err != nil {
+			LOGGER.Error("Error opening the file \""+file_name+"\":", err)
+			return err
+		}
+		defer file.Close()
+
+		var lines []string
+		scanner := bufio.NewScanner(file)
+
+		for scanner.Scan() {
+			line := scanner.Text()
+			line = strings.TrimSpace(line)
+			if line != "" {
+				lines = append(lines, line)
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			LOGGER.Error("Error occurred during file scanning:", err)
+		}
+
+		for _, line := range lines {
+			cmd := exec.Command("/bin/sh", "-c", line)
+			output, err := cmd.CombinedOutput()
+			// fmt.Println(string(output))
+			LOGGER.Info(string(output))
+			if err != nil {
+				return err
+			}
+		}
+	*/
+	content, err := os.ReadFile(XDG_CONFIG_HOME + "/dotcomfy/" + file_name)
 	if err != nil {
 		LOGGER.Error("Error opening the file \""+file_name+"\":", err)
 		return err
 	}
-	defer file.Close()
 
-	var lines []string
-	scanner := bufio.NewScanner(file)
+	cmd := exec.Command("/bin/sh", "-c", string(content))
 
-	for scanner.Scan() {
-		line := scanner.Text()
-		line = strings.TrimSpace(line)
-		if line != "" {
-			lines = append(lines, line)
-		}
+	std_output, err := cmd.StdoutPipe()
+	if err != nil {
+		LOGGER.Error("Error creating stdoutpipe:", err)
+		return err
 	}
 
-	if err := scanner.Err(); err != nil {
-		LOGGER.Error("Error occurred during file scanning:", err)
+	std_err, err := cmd.StderrPipe()
+	if err != nil {
+		LOGGER.Error("Error creating stderrpipe:", err)
+		return err
 	}
 
-	for _, line := range lines {
-		cmd := exec.Command("/bin/sh", "-c", line)
-		output, err := cmd.CombinedOutput()
-		// fmt.Println(string(output))
-		LOGGER.Info(string(output))
-		if err != nil {
-			return err
-		}
+	std_out_bytes, _ := io.ReadAll(std_output)
+	std_err_bytes, _ := io.ReadAll(std_err)
+
+	if err := cmd.Wait(); err != nil {
+		LOGGER.Errorf("\""+file_name+"\" finished with an error:", err)
+		return err
 	}
+
+	_ = string(std_out_bytes)
+
+	if len(std_err_bytes) > 0 {
+		LOGGER.Errorf("Errors:", string(std_err_bytes))
+	}
+
 	return nil
 }
