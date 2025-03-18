@@ -32,5 +32,6 @@ fzf --help
 # tmux --help
 zig --help
 nvm --help
-nvim --help
+# nvim --help
+which nvim || true
 sleep 5

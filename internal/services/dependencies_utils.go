@@ -3,7 +3,6 @@ package services
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -148,8 +147,10 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 
 func InstallPackage(pm string, pkg string, version string) error {
 	LOGGER = Log.GetLogger()
+
 	fmt.Println("Installing package \"" + pkg + "\" from package manager " + pm + " ...")
 	LOGGER.Info("Installing package \"" + pkg + "\" from package manager " + pm + " ...")
+
 	switch pm {
 	case "apt":
 		if version != "" {
@@ -200,6 +201,7 @@ func InstallPackage(pm string, pkg string, version string) error {
 
 func HandleSteps(steps []string) error {
 	LOGGER = Log.GetLogger()
+
 	for _, step := range steps {
 		cmd := exec.Command("/bin/sh", "-c", step)
 		output, err := cmd.CombinedOutput()
@@ -216,72 +218,21 @@ func HandleSteps(steps []string) error {
 func HandleScript(file_name string) error {
 	LOGGER = Log.GetLogger()
 	XDG_CONFIG_HOME, _ := os.UserConfigDir()
-	/*
-		file, err := os.Open(XDG_CONFIG_HOME + "/dotcomfy/" + file_name)
-		if err != nil {
-			LOGGER.Error("Error opening the file \""+file_name+"\":", err)
-			return err
-		}
-		defer file.Close()
 
-		var lines []string
-		scanner := bufio.NewScanner(file)
-
-		for scanner.Scan() {
-			line := scanner.Text()
-			line = strings.TrimSpace(line)
-			if line != "" {
-				lines = append(lines, line)
-			}
-		}
-
-		if err := scanner.Err(); err != nil {
-			LOGGER.Error("Error occurred during file scanning:", err)
-		}
-
-		for _, line := range lines {
-			cmd := exec.Command("/bin/sh", "-c", line)
-			output, err := cmd.CombinedOutput()
-			// fmt.Println(string(output))
-			LOGGER.Info(string(output))
-			if err != nil {
-				return err
-			}
-		}
-	*/
-	content, err := os.ReadFile(XDG_CONFIG_HOME + "/dotcomfy/" + file_name)
+	err := os.Chmod(XDG_CONFIG_HOME+"/dotcomfy/"+file_name, 0755)
 	if err != nil {
-		LOGGER.Error("Error opening the file \""+file_name+"\":", err)
+		LOGGER.Error("Error making script \""+file_name+"\" executable:", err)
 		return err
 	}
 
-	cmd := exec.Command("/bin/sh", "-c", string(content))
-
-	std_output, err := cmd.StdoutPipe()
+	cmd := exec.Command(XDG_CONFIG_HOME + "/dotcomfy/" + file_name)
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		LOGGER.Error("Error creating stdoutpipe:", err)
+		LOGGER.Error("Error executing script \""+file_name+"\":", err)
 		return err
 	}
 
-	std_err, err := cmd.StderrPipe()
-	if err != nil {
-		LOGGER.Error("Error creating stderrpipe:", err)
-		return err
-	}
-
-	std_out_bytes, _ := io.ReadAll(std_output)
-	std_err_bytes, _ := io.ReadAll(std_err)
-
-	if err := cmd.Wait(); err != nil {
-		LOGGER.Errorf("\""+file_name+"\" finished with an error:", err)
-		return err
-	}
-
-	_ = string(std_out_bytes)
-
-	if len(std_err_bytes) > 0 {
-		LOGGER.Errorf("Errors:", string(std_err_bytes))
-	}
+	fmt.Println(string(output))
 
 	return nil
 }
