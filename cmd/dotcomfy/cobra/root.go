@@ -4,10 +4,12 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cobra
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"os"
+
+	Config "dotcomfy/internal/config"
+	Log "dotcomfy/internal/logger"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -15,10 +17,10 @@ var rootCmd = &cobra.Command{
 	Use:   "dotcomfy",
 	Short: "A simple tool for managing your dotfiles",
 	Long: `A simple tool for managing your dotfiles.
-	Whether you're SSHing into brand new cloud servers,
-	bouncing between different operating systems, or 
-	just wanting to try out different Linux rices,
-	dotcomfy has you covered!`,
+Whether you're SSHing into brand new cloud servers,
+bouncing between different operating systems, or 
+just wanting to try out different Linux rices,
+dotcomfy has you covered!`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
@@ -34,11 +36,13 @@ func Execute() {
 }
 
 func init() {
+	cobra.OnInitialize(initConfig)
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/dotcomfy/config.toml)")
+	rootCmd.PersistentFlags().StringVar(&CFG_FILE, "config", "", "config file (default is $HOME/.config/dotcomfy/config.toml)")
+	rootCmd.PersistentFlags().CountVarP(&VERBOSITY, "verbosity", "v", "increasing levels of logging verbosity")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -46,16 +50,14 @@ func init() {
 }
 
 func initConfig() {
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
+	if CFG_FILE != "" {
+		viper.SetConfigFile(CFG_FILE)
 	} else {
-		// home, err := os.UserHomeDir()
-
 		cfg, err := os.UserConfigDir()
 		cobra.CheckErr(err)
 
-		viper.AddConfigPath(cfg + "/dotcomfy/") // Config file lives in $HOME/.config/dotcomfy/
-		viper.SetConfigName("config")
-		viper.SetConfigType("toml")
+		CFG_FILE = cfg + "/dotcomfy/config.toml"
 	}
+	Log.Init(VERBOSITY)
+	Config.SetConfig()
 }
