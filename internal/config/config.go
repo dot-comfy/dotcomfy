@@ -4,15 +4,18 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/viper"
+
+	Log "dotcomfy/internal/logger"
 )
 
 type Config struct {
 	Dependencies map[string]Dependency `toml:"dependencies,omitempty"`
 }
 
-// TODO: Add "needs" cyclical dependency check
+// TODO: Find a way to pull config file down first from the repo if it exists to validate before installation
 func (c *Config) Validate() []error {
 	dependencies := c.Dependencies
 	errs := []error{}
@@ -29,6 +32,7 @@ func (c *Config) Validate() []error {
 		steps := d.GetSteps()
 		script := d.GetScript()
 
+		// Check for conflicting fields
 		if version != "" && steps != nil {
 			errs = append(errs, errors.New("Dependency \""+dependency+"\" cannot have both \"version\" and \"steps\""))
 		}
@@ -50,8 +54,47 @@ func (c *Config) Validate() []error {
 		if version == "" && script == "" && steps == nil && post_install_steps == nil && post_install_script == "" {
 			errs = append(errs, errors.New("Dependency \""+dependency+"\" must have \"version\" set to \"latest\" or a specific version number"))
 		}
+
+		if d.GetNeeds() != nil {
+			for _, n := range d.GetNeeds() {
+				if n == dependency {
+					errs = append(errs, errors.New("Dependency \""+dependency+"\" cannot have itself as a \"need\""))
+				} else {
+					// Check to see if there is a "needs" cycle
+					fmt.Println("Checking dependency \"" + dependency + "\" for a dependency cycle...")
+					cycle, chain := CheckDependencyCycle(dependency, n)
+					chain = append(chain, n)
+					fmt.Println(chain)
+					if cycle {
+						errs = append(errs, errors.New("Dependency \""+dependency+"\" has a dependency cycle: "+strings.Join(chain, " <- ")+" <- "+dependency))
+					}
+				}
+			}
+		}
 	}
 	return errs
+}
+
+func CheckDependencyCycle(dependency string, need string) (bool, []string) {
+	d, err := GetDependency(need)
+	if err != nil {
+		fmt.Println(err)
+		return false, nil
+	}
+	if d.GetNeeds() != nil {
+		for _, n := range d.GetNeeds() {
+			fmt.Println(n)
+			if n == dependency {
+				return true, []string{n}
+			} else {
+				cycle, chain := CheckDependencyCycle(dependency, n)
+				if cycle {
+					return true, append(chain, n)
+				}
+			}
+		}
+	}
+	return false, nil
 }
 
 func GetDependency(name string) (*Dependency, error) {
@@ -119,7 +162,12 @@ func (d *Dependency) GetVersion() string {
 }
 
 func (d *Dependency) SetInstalled() {
-	d.Installed = true
+	Log.GetLogger().Info("Setting dependency \"" + d.Name + "\" as installed...")
+	c := GetConfig()
+	if dependency, ok := c.Dependencies[d.Name]; ok {
+		dependency.Installed = true
+		c.Dependencies[d.Name] = dependency
+	}
 }
 
 func (d *Dependency) GetInstalled() bool {
@@ -127,34 +175,39 @@ func (d *Dependency) GetInstalled() bool {
 }
 
 func (d *Dependency) SetFailedInstall() {
-	d.FailedInstall = true
+	Log.GetLogger().Info("Setting dependency \"" + d.Name + "\" as failed install...")
+	c := GetConfig()
+	if dependency, ok := c.Dependencies[d.Name]; ok {
+		dependency.FailedInstall = true
+		c.Dependencies[d.Name] = dependency
+	}
 }
 
 func (d *Dependency) GetFailedInstall() bool {
 	return d.FailedInstall
 }
 
-var config Config
+var config *Config
 
 func SetConfig() {
+	LOGGER := Log.GetLogger()
 	cfg, err := os.UserConfigDir()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "DEBUGPRINT: config.go:27: err=%+v\n", err)
-		os.Exit(1)
+		LOGGER.Fatal(err)
 	}
 	viper.AddConfigPath(cfg + "/dotcomfy/") // Config file lives in $HOME/.config/dotcomfy/
 	viper.SetConfigName("config.toml")
 	viper.SetConfigType("toml")
 	err = viper.ReadInConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "DEBUGPRINT: config.go:29: err=%+v\n", err)
+		LOGGER.Error(err)
 	}
 	viper.Unmarshal(&config)
 	config.SetDependencyNames()
 }
 
 func GetConfig() *Config {
-	return &config
+	return config
 }
 
 func GetDependencies() map[string]string {

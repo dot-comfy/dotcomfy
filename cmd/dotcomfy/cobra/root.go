@@ -9,6 +9,7 @@ import (
 	"os"
 
 	Config "dotcomfy/internal/config"
+	Log "dotcomfy/internal/logger"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -16,10 +17,10 @@ var rootCmd = &cobra.Command{
 	Use:   "dotcomfy",
 	Short: "A simple tool for managing your dotfiles",
 	Long: `A simple tool for managing your dotfiles.
-	Whether you're SSHing into brand new cloud servers,
-	bouncing between different operating systems, or 
-	just wanting to try out different Linux rices,
-	dotcomfy has you covered!`,
+Whether you're SSHing into brand new cloud servers,
+bouncing between different operating systems, or 
+just wanting to try out different Linux rices,
+dotcomfy has you covered!`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
@@ -40,7 +41,8 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&CFG_FILE, "config", "", "config file (default is $HOME/.dotcomfy/config.toml)")
+	rootCmd.PersistentFlags().StringVar(&CFG_FILE, "config", "", "config file (default is $HOME/.config/dotcomfy/config.toml)")
+	rootCmd.PersistentFlags().CountVarP(&VERBOSITY, "verbosity", "v", "increasing levels of logging verbosity")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -56,5 +58,6 @@ func initConfig() {
 
 		CFG_FILE = cfg + "/dotcomfy/config.toml"
 	}
+	Log.Init(VERBOSITY)
 	Config.SetConfig()
 }

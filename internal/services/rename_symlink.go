@@ -4,10 +4,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	Log "dotcomfy/internal/logger"
 )
 
 // TODO: write documentation
 func RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, new_path string) (string, error) {
+	LOGGER = Log.GetLogger()
 	// center_path represents the path of the directory entry
 	// with the dotcomfy_path prefix removed.
 	center_path := strings.TrimPrefix(new_path, dotcomfy_dir)
@@ -20,24 +23,29 @@ func RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, new_path string) (string,
 		new_path = new_path + ".pre-dotcomfy"
 		err = os.Rename(old_path, new_path)
 		if err != nil {
+			LOGGER.Error(err)
 			return "", err
 		}
 		err = os.Symlink(new_path, old_path)
 		if err != nil {
+			LOGGER.Error(err)
 			return "", err
 		}
 		return old_path, nil
 	} else if os.IsNotExist(err) {
 		err = os.MkdirAll(filepath.Dir(old_path), 0755)
 		if err != nil {
+			LOGGER.Error(err)
 			return "", err
 		}
 		err = os.Symlink(new_path, old_path)
 		if err != nil {
+			LOGGER.Error(err)
 			return "", err
 		}
 		return old_path, nil
 	} else {
+		LOGGER.Error(err)
 		return "", err
 	}
 }
