@@ -38,6 +38,12 @@ branch. Note that you must have write permissions for this to succeed.`,
 			LOGGER.Fatal(err)
 		}
 		dotcomfy_dir := user.HomeDir + "/.dotcomfy"
+		var username string
+
+		LOGGER.Info("Username for push: ")
+		fmt.Print("Username for push: ")
+		fmt.Scan(&username)
+		LOGGER.Infof("Username entered: %s", username)
 	},
 }
 

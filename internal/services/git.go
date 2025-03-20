@@ -72,7 +72,7 @@ func Pull(repo_path string) error {
 	return nil
 }
 
-func Push(repo_path string) error {
+func Push(repo_path, username string) error {
 	var repo_url string
 	var branch string
 	var failed_files []string
@@ -130,12 +130,6 @@ func Push(repo_path string) error {
 		}
 	}
 
-	curr_user, err := user.Current()
-	username := "unknown"
-	if err == nil {
-		username = curr_user.Username
-	}
-
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "unknown"
@@ -146,6 +140,12 @@ func Push(repo_path string) error {
 		hostname,
 		time.Now().Format("12:30:00 CST 1963-11-22"),
 	)
+
+	_, err = worktree.Commit(commit_message, &git.CommitOptions{
+		Author: &object.Signature{
+			Name: username
+		}
+	})
 
 	return nil
 }
