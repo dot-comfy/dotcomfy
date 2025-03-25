@@ -11,6 +11,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 
+	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
 )
 
@@ -72,10 +73,13 @@ func Pull(repo_path string) error {
 	return nil
 }
 
-func Push(repo_path, username string) error {
+func Push(repo_path string) error {
 	var repo_url string
 	var branch string
 	var failed_files []string
+
+	config := Config.GetConfig()
+	auth := config.Auth
 
 	repo, err := git.PlainOpen(repo_path)
 	if err != nil {
@@ -143,9 +147,32 @@ func Push(repo_path, username string) error {
 
 	_, err = worktree.Commit(commit_message, &git.CommitOptions{
 		Author: &object.Signature{
-			Name: username
-		}
+			Name:  auth.Username,
+			Email: auth.Email,
+			When:  time.Now(),
+		},
 	})
+	if err != nil {
+		LOGGER.Fatalf("Error committing: %v", err)
+	}
+
+	// TODO:
+	// Set up auth for private repos and/or username/password auth at runtime
+	/*
+		var auth *http.BasicAuth
+		if auth != nil {
+
+		}
+	*/
+
+	err = repo.Push(&git.PushOptions{
+		RemoteName: "origin",
+		Progress:   os.Stdout,
+		Force:      false,
+	})
+	if err != nil {
+		LOGGER.Fatalf("Error pushing: %v", err)
+	}
 
 	return nil
 }

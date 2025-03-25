@@ -52,7 +52,7 @@ BINARY = ./bin/dotcomfy
 
 install:
 	@echo "Installing dotcomfy to $(BINDIR)"
-	sudo install -m 755 $BINARY $BINDIR
+	sudo install -m 755 $(BINARY) $(BINDIR)
 
 .PHONY: test-%
 

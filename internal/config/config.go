@@ -13,7 +13,7 @@ import (
 
 type Config struct {
 	Dependencies map[string]Dependency `toml:"dependencies,omitempty"`
-	Git          Git                   `toml:authentication,omitempty`
+	Auth         Auth                  `toml:authentication,omitempty`
 }
 
 // TODO: Find a way to pull config file down first from the repo if it exists to validate before installation
@@ -118,21 +118,21 @@ func (c *Config) SetDependencyNames() {
 	c.Dependencies = newDependencies
 }
 
-type Git struct {
+type Auth struct {
 	Username    string `toml:username,omitempty`
 	Email       string `toml:email,omitempty`
 	SSHFilePath string `toml:ssh_file,omitempty`
 }
 
-func (g *Git) GetUsername() string {
+func (g *Auth) GetUsername() string {
 	return g.Username
 }
 
-func (g *Git) GetEmail() string {
+func (g *Auth) GetEmail() string {
 	return g.Email
 }
 
-func (g *Git) GetSSHFilePath() string {
+func (g *Auth) GetSSHFilePath() string {
 	return g.SSHFilePath
 }
 
