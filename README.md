@@ -16,6 +16,10 @@ The dependency management feature is still in development and may not work as ex
 
 ## Installation
 
+### WARNING
+
+**Please make sure you back up your `.config` directory before using dotcomfy. It is currently a WIP, and stability is not guaranteed.**
+
 ### Prerequisites
 
 - Go
