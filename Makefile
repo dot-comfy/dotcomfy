@@ -47,6 +47,13 @@ check-test:
 
 .PHONY: check-test
 
+BINDIR = /usr/local/bin
+BINARY = ./bin/dotcomfy
+
+install:
+	@echo "Installing dotcomfy to $(BINDIR)"
+	sudo install -m 755 $(BINARY) $(BINDIR)
+
 .PHONY: test-%
 
 # Running `test-install` will run `tests/scripts/install.sh` from inside the
