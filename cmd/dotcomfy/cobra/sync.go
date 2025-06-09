@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	Log "dotcomfy/internal/logger"
+	"dotcomfy/internal/services"
 )
 
 // syncCmd represents the sync command
@@ -21,6 +22,17 @@ var syncCmd = &cobra.Command{
 and update your dotcomfy installation accordingly.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("sync called")
+		LOGGER = Log.GetLogger()
+		user, err := user.Current()
+		if err != nil {
+			LOGGER.Fatal(err)
+		}
+		dotcomfy_dir := user.HomeDir + "/.dotcomfy"
+
+		err = services.Pull(dotcomfy_dir)
+		if err != nil {
+			LOGGER.Error(err)
+		}
 	},
 }
 
@@ -32,13 +44,14 @@ branch. Note that you must have write permissions for this to succeed.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("push called")
 
-		LOGGER = Log.GetLogger()
-		user, err := user.Current()
-		if err != nil {
-			LOGGER.Fatal(err)
-		}
-		dotcomfy_dir := user.HomeDir + "/.dotcomfy"
-
+		/*
+			LOGGER = Log.GetLogger()
+			user, err := user.Current()
+			if err != nil {
+				LOGGER.Fatal(err)
+			}
+			dotcomfy_dir := user.HomeDir + "/.dotcomfy"
+		*/
 	},
 }
 
