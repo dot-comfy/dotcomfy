@@ -60,7 +60,7 @@ func run(cmd *cobra.Command, args []string) {
 		} else {
 			url = args[0]
 		}
-		err = services.Clone(url, BRANCH, dotcomfy_dir)
+		err = services.Clone(url, BRANCH, COMMIT, dotcomfy_dir)
 
 		if err != nil {
 			LOGGER.Error(err)
@@ -68,7 +68,7 @@ func run(cmd *cobra.Command, args []string) {
 		}
 	} else {
 		url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
-		err = services.Clone(url, BRANCH, dotcomfy_dir)
+		err = services.Clone(url, BRANCH, COMMIT, dotcomfy_dir)
 		if err != nil {
 			LOGGER.Error(err)
 		}
