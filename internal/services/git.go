@@ -15,7 +15,7 @@ import (
 	Log "dotcomfy/internal/logger"
 )
 
-func Clone(url string, branch, path string) error {
+func Clone(url, branch, commit_hash, path string) error {
 	LOGGER = Log.GetLogger()
 	// @REF [Basic go-git example](https://github.com/go-git/go-git/blob/master/_examples/clone/main.go)
 	repo, err := git.PlainClone(path, false, &git.CloneOptions{
@@ -27,6 +27,22 @@ func Clone(url string, branch, path string) error {
 	if err != nil {
 		LOGGER.Error(err)
 		return err
+	}
+
+	if commit_hash != "" {
+		worktree, err := repo.Worktree()
+		if err != nil {
+			LOGGER.Error(err)
+			return err
+		}
+
+		err = worktree.Checkout(&git.CheckoutOptions{
+			Hash: plumbing.NewHash(commit_hash),
+		})
+		if err != nil {
+			LOGGER.Error(err)
+			return err
+		}
 	}
 
 	// head, err := repo.Head()
