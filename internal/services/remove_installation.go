@@ -25,19 +25,16 @@ func RemoveInstallation(dotcomfy_dir, old_dotfiles_dir string) (err error) {
 					// Remove symlink
 					err = os.Remove(old_path)
 					if err != nil {
-						LOGGER.Error(err)
-						return err
+						LOGGER.Warn(err)
 					}
 					err = os.Rename(old_path, old_name)
 					if err != nil {
-						LOGGER.Error(err)
-						return err
+						LOGGER.Warn(err)
 					}
 				} else { // Just remove symlink
 					err = os.Remove(old_path)
 					if err != nil {
-						LOGGER.Error(err)
-						return err
+						LOGGER.Warn(err)
 					}
 				}
 			}
