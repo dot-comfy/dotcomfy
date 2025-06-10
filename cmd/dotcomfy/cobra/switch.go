@@ -94,7 +94,7 @@ func switchDotfiles(dotcomfy_dir, old_dotfiles_dir, url, branch string) error {
 	}
 
 	// Perform install
-	err = services.Clone(url, branch, dotcomfy_dir)
+	err = services.Clone(url, branch, COMMIT, dotcomfy_dir)
 	if err != nil {
 		LOGGER.Error(err)
 		return err
@@ -138,5 +138,6 @@ func init() {
 	// is called directly, e.g.:
 	// switchCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	switchCmd.Flags().StringVar(&BRANCH, "branch", "", "Branch to switch to")
+	switchCmd.Flags().StringVar(&COMMIT, "at-commit", "", "Specific commit hash to install")
 	switchCmd.Flags().StringVar(&REPO, "repo", "", "Repository to switch to")
 }
