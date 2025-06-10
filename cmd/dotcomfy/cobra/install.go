@@ -121,5 +121,6 @@ func init() {
 	// is called directly, e.g.:
 	// installCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	installCmd.PersistentFlags().StringVarP(&BRANCH, "branch", "b", "main", "Branch to clone")
+	installCmd.PersistentFlags().StringVar(&COMMIT, "at-commit", "", "Specific commit hash to install")
 	installCmd.Flags().BoolVar(&skip_dependencies, "skip-dependencies", false, "Skip installing dependencies")
 }
