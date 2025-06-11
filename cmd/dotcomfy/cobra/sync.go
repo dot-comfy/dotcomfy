@@ -5,7 +5,6 @@ package cobra
 
 import (
 	"fmt"
-	"os"
 	"os/user"
 
 	"github.com/spf13/cobra"

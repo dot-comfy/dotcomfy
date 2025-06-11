@@ -3,15 +3,15 @@ package services
 import (
 	"fmt"
 	"os"
-	"os/user"
-	"time"
+	// "os/user"
+	// "time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/go-git/go-git/v5/plumbing/transport"
+	// "github.com/go-git/go-git/v5/plumbing/object"
+	//"github.com/go-git/go-git/v5/plumbing/transport"
 
-	Config "dotcomfy/internal/config"
+	// Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
 )
 
@@ -37,7 +37,8 @@ func Clone(url, branch, commit_hash, path string) error {
 		}
 
 		err = worktree.Checkout(&git.CheckoutOptions{
-			Hash: plumbing.NewHash(commit_hash),
+			Hash:  plumbing.NewHash(commit_hash),
+			Force: true,
 		})
 		if err != nil {
 			LOGGER.Error(err)
@@ -57,11 +58,20 @@ func Clone(url, branch, commit_hash, path string) error {
 }
 
 func Pull(repo_path string) error {
+	LOGGER = Log.GetLogger()
 	repo, err := git.PlainOpen(repo_path)
 	if err != nil {
 		LOGGER.Errorf("Error opening the local repo in %s: %v", repo_path, err)
 		return err
 	}
+
+	head, err := repo.Head()
+	if err != nil {
+		LOGGER.Errorf("Error getting HEAD: %v", err)
+		return err
+	}
+
+	branch := head.Name()
 
 	worktree, err := repo.Worktree()
 	if err != nil {
@@ -70,15 +80,16 @@ func Pull(repo_path string) error {
 	}
 
 	err = worktree.Pull(&git.PullOptions{
-		RemoteName: "origin",
-		Progress:   os.Stdout, // May omit this, we'll see how it looks
+		RemoteName:    "origin",
+		ReferenceName: branch,
+		Progress:      os.Stdout, // May omit this, we'll see how it looks
 	})
 	if err != nil && err != git.NoErrAlreadyUpToDate {
-		LOGGER.Errorf("Error pulling: %v", err)
+		LOGGER.Errorf("Error pulling: %v", err) // TODO: Why is this saying there's not an object?
 		return err
 	}
 
-	head, err := repo.Head()
+	head, err = repo.Head()
 	if err != nil {
 		LOGGER.Errorf("Error getting HEAD: %v", err)
 		return err
@@ -89,6 +100,7 @@ func Pull(repo_path string) error {
 	return nil
 }
 
+/*
 func Push(repo_path string) error {
 	var repo_url string
 	var branch string
@@ -174,12 +186,10 @@ func Push(repo_path string) error {
 
 	// TODO:
 	// Set up auth for private repos and/or username/password auth at runtime
-	/*
-		var auth *http.BasicAuth
-		if auth != nil {
+	// var auth *http.BasicAuth
+	// if auth != nil {
 
-		}
-	*/
+	// }
 
 	err = repo.Push(&git.PushOptions{
 		RemoteName: "origin",
@@ -192,3 +202,4 @@ func Push(repo_path string) error {
 
 	return nil
 }
+*/
