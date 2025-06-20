@@ -13,6 +13,7 @@ import (
 
 type Config struct {
 	Dependencies map[string]Dependency `toml:"dependencies,omitempty"`
+	Auth         Auth                  `toml:authentication,omitempty`
 }
 
 // TODO: Find a way to pull config file down first from the repo if it exists to validate before installation
@@ -115,6 +116,24 @@ func (c *Config) SetDependencyNames() {
 		newDependencies[name] = d
 	}
 	c.Dependencies = newDependencies
+}
+
+type Auth struct {
+	Username    string `toml:username,omitempty`
+	Email       string `toml:email,omitempty`
+	SSHFilePath string `toml:ssh_file,omitempty`
+}
+
+func (g *Auth) GetUsername() string {
+	return g.Username
+}
+
+func (g *Auth) GetEmail() string {
+	return g.Email
+}
+
+func (g *Auth) GetSSHFilePath() string {
+	return g.SSHFilePath
 }
 
 type Dependency struct {
