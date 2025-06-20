@@ -16,11 +16,14 @@ The dependency management feature is still in development and may not work as ex
 
 ## Installation
 
+### WARNING
+
+**Please make sure you back up your `.config` directory before using dotcomfy. It is currently a WIP, and stability is not guaranteed.**
+
 ### Prerequisites
 
 - Go
 - Git
-- PackageKit
 
 ### Building from Source
 
@@ -31,15 +34,16 @@ make build
 sudo make install
 ```
 
-This will build the binare and install it to `/usr/local/bin/`.
+This will build the binary and install it to `/usr/local/bin/`.
 
 ## Usage
 
 ### Installation
-`dotcomfy install [REPO] --branch [BRANCH]`
+`dotcomfy install [REPO] --branch [BRANCH] --skip-dependencies`
 - REPO: can be either a GitHub username or a repository URL.
   - If you're using a GitHub username, dotcomfy will attempt to clone the `dotfiles` repository under that user.
 - BRANCH: the branch of the repository to install. If not specified, the `main` branch will be used.
+- `--skip-dependencies` skips the dependency installation step.
 
 ### Switch
 `dotcomfy switch --repo [REPO] --branch [BRANCH]`
@@ -58,30 +62,36 @@ dotcomfy's config file lives at `$HOME/.config/dotcomfy/config.toml`.
 ### Dependencies
 
 You can specify packages that need to be installed in order for the config set to function properly:
-```toml
+```toml filename="config.toml"
 [dependencies]
 # Version can be specified for a package being installed from a package manager
 fzf = { version = "0.57.0" }
-nvim = { 
-    # Custom installations can be specified step by step
-    steps = [
-        "curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz",
-        "sudo rm -rf /opt/nvim",
-        "sudo tar -C /opt -xzf nvim-linux-x86_64.tar.gz",
-        "echo 'export PATH=\"$PATH:/opt/nvim-linux-x86_64/bin\"' >> .zshrc"
-    ]
-}
-# Empty configs will default to installing the latest version
-# of the package found in the package manager
-tmux = {}
+# Custom shell scripts for dependency installation can be specified.
+# The `needs` field can be used to specify dependencies that need to be installed before this dependency.
+nvim = { script = "nvim.sh", needs = ["zsh"] }
+# Custom installations can be specified step by step
+nvm = { steps = [ "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash", "source ~/.zshrc" ], needs = ["zsh"] }
+tmux = { version = "latest" }
 # Commands needed after package installation can also be specified
-zsh = { 
-    post_install_steps = [
-        "chsh -s $(which zsh)"
-    ]
-}
-oh-my-zsh = {
-    # Custom installation scripts can be specified. These should be located in the same directory as the config file.
-    script = "oh-my-zsh.sh"
-}
+zsh = { post_install_steps = [ "chsh -s $(which zsh)" ] }
+```
+#### Custom Installation Scripts
+
+Scripts should start with `#!/bin/sh` and should be located in the same directory as the config file.
+```sh filename="nvim.sh"
+#!/bin/bash
+
+curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+sudo rm -rf /opt/nvim
+sudo tar -C /opt -xzf nvim-linux-x86_64.tar.gz
+if [ -n "$ZSH_VERSION" ]; then
+    echo 'export PATH="$PATH:/opt/nvim-linux-x86_64/bin"' >> "$HOME/.zshrc"
+    echo 'Adding path to .zshrc'
+elif [ -n "$BASH_VERSION" ]; then
+    echo 'export PATH="$PATH:/opt/nvim-linux-x86_64/bin"' >> "$HOME/.bashrc"
+    echo 'Adding path to .bashrc'
+else
+    echo 'No idea what shell is on this system'
+fi
+export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
 ```

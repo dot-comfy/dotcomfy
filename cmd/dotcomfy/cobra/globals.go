@@ -8,6 +8,7 @@ import (
 
 var (
 	BRANCH    string
+	COMMIT    string
 	CONFIRM   bool
 	CFG_FILE  string
 	COMMIT    string
