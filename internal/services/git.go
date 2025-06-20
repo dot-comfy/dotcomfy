@@ -118,7 +118,7 @@ func Pull(repo_path string) error {
 
 	err = worktree.Checkout(&git.CheckoutOptions{
 		Branch: plumbing.NewBranchReferenceName(branch),
-		Force: true
+		Force:  true,
 	})
 	if err != nil {
 		LOGGER.Errorf("Error checking out branch: %v", err)
