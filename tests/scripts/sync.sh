@@ -4,7 +4,7 @@
 
 set -xeuv
 
-./bin/dotcomfy install ethangamma24 --branch hyprland --at-commit de02cedcfa7eb6d5186fdb81e13290841081d6f8 --skip-dependencies
+./bin/dotcomfy install ethangamma24 --branch hyprland --skip-dependencies -vvvv
 ls -al .dotcomfy/ghostty/
 sleep 5
 

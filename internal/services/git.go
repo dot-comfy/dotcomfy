@@ -3,11 +3,14 @@ package services
 import (
 	"fmt"
 	"os"
+	"strings"
+
 	// "os/user"
 	// "time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+
 	// "github.com/go-git/go-git/v5/plumbing/object"
 	//"github.com/go-git/go-git/v5/plumbing/transport"
 
@@ -71,7 +74,13 @@ func Pull(repo_path string) error {
 		return err
 	}
 
-	branch := head.Name()
+	branch := string(head.Name())
+	if strings.HasPrefix(branch, "refs/heads/") {
+		branch = strings.TrimPrefix(branch, "refs/heads/")
+	}
+
+	LOGGER.Errorf("Branch name: %s", branch)
+	LOGGER.Errorf("HEAD is at commit %s", head)
 
 	worktree, err := repo.Worktree()
 	if err != nil {
@@ -79,13 +88,40 @@ func Pull(repo_path string) error {
 		return err
 	}
 
+	err = worktree.Reset(&git.ResetOptions{
+		Mode: git.HardReset,
+	})
+	if err != nil {
+		LOGGER.Errorf("Error resetting the worktree: %v", err)
+		return err
+	}
+
+	err = worktree.Clean(&git.CleanOptions{
+		Dir: true,
+	})
+	if err != nil {
+		LOGGER.Errorf("Error cleaning the worktree: %v", err)
+		return err
+	}
+
 	err = worktree.Pull(&git.PullOptions{
 		RemoteName:    "origin",
-		ReferenceName: branch,
+		ReferenceName: plumbing.NewBranchReferenceName(branch),
+		SingleBranch:  true,
+		Force:         true,
 		Progress:      os.Stdout, // May omit this, we'll see how it looks
 	})
 	if err != nil && err != git.NoErrAlreadyUpToDate {
 		LOGGER.Errorf("Error pulling: %v", err) // TODO: Why is this saying there's not an object?
+		return err
+	}
+
+	err = worktree.Checkout(&git.CheckoutOptions{
+		Branch: plumbing.NewBranchReferenceName(branch),
+		Force: true
+	})
+	if err != nil {
+		LOGGER.Errorf("Error checking out branch: %v", err)
 		return err
 	}
 
