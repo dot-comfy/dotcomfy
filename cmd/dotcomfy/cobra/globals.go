@@ -11,7 +11,6 @@ var (
 	COMMIT    string
 	CONFIRM   bool
 	CFG_FILE  string
-	COMMIT    string
 	CONFIG    config.Config
 	REPO      string
 	VERBOSITY int
