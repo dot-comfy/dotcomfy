@@ -9,6 +9,7 @@ import (
 	// "time"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 
 	// "github.com/go-git/go-git/v5/plumbing/object"
@@ -74,13 +75,39 @@ func Pull(repo_path string) error {
 		return err
 	}
 
-	branch := string(head.Name())
-	if strings.HasPrefix(branch, "refs/heads/") {
-		branch = strings.TrimPrefix(branch, "refs/heads/")
+	branch_name := string(head.Name())
+	if strings.HasPrefix(branch_name, "refs/heads/") {
+		branch_name = strings.TrimPrefix(branch_name, "refs/heads/")
 	}
 
-	LOGGER.Errorf("Branch name: %s", branch)
-	LOGGER.Errorf("HEAD is at commit %s", head)
+	err = repo.Fetch(&git.FetchOptions{
+		RemoteName: "origin",
+		Force:      true,
+		RefSpecs: []config.RefSpec{
+			config.RefSpec("+refs/heads/" + branch_name + ":refs/remotes/origin/" + branch_name),
+		},
+	})
+	if err != nil && err != git.NoErrAlreadyUpToDate {
+		LOGGER.Errorf("Error fetching: %v", err)
+		return err
+	}
+
+	remote_ref_name := plumbing.NewRemoteReferenceName("origin", branch_name)
+	origin_ref, err := repo.Reference(remote_ref_name, true)
+	if err != nil {
+		LOGGER.Errorf("Error getting origin reference: %v", err)
+		return err
+	}
+
+	LOGGER.Errorf("Origin ref after fetch: %s", origin_ref.Hash())
+
+	branch := plumbing.NewBranchReferenceName(branch_name)
+	// Bypass dirty worktree checks and just "fast forward" to the latest commit
+	err = repo.Storer.SetReference(plumbing.NewHashReference(branch, origin_ref.Hash()))
+	if err != nil {
+		LOGGER.Errorf("Error switching local reference to latest from origin: %v", err)
+		return err
+	}
 
 	worktree, err := repo.Worktree()
 	if err != nil {
@@ -88,40 +115,24 @@ func Pull(repo_path string) error {
 		return err
 	}
 
-	err = worktree.Reset(&git.ResetOptions{
-		Mode: git.HardReset,
+	err = worktree.Checkout(&git.CheckoutOptions{
+		Branch: branch,
+		Force:  true,
 	})
 	if err != nil {
-		LOGGER.Errorf("Error resetting the worktree: %v", err)
-		return err
-	}
-
-	err = worktree.Clean(&git.CleanOptions{
-		Dir: true,
-	})
-	if err != nil {
-		LOGGER.Errorf("Error cleaning the worktree: %v", err)
+		LOGGER.Errorf("Error checking out branch: %v", err)
 		return err
 	}
 
 	err = worktree.Pull(&git.PullOptions{
 		RemoteName:    "origin",
-		ReferenceName: plumbing.NewBranchReferenceName(branch),
+		ReferenceName: branch,
 		SingleBranch:  true,
 		Force:         true,
 		Progress:      os.Stdout, // May omit this, we'll see how it looks
 	})
 	if err != nil && err != git.NoErrAlreadyUpToDate {
-		LOGGER.Errorf("Error pulling: %v", err) // TODO: Why is this saying there's not an object?
-		return err
-	}
-
-	err = worktree.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.NewBranchReferenceName(branch),
-		Force:  true,
-	})
-	if err != nil {
-		LOGGER.Errorf("Error checking out branch: %v", err)
+		LOGGER.Errorf("Error pulling: %v", err)
 		return err
 	}
 
