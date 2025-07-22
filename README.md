@@ -6,10 +6,10 @@
 
 ## Features
 
-- **One-command installation** of config sets for various developer tools.
-- **Config switching** between different setups or environments.
-- **Automated dependency management** for packages required by your configs.
-- **Customizable installation scripts** for tools without standard package management.
+- One-command installation of config sets for various developer tools.
+- Config switching between different setups or environments.
+- Automated dependency management for packages required by your configs.
+- Customizable installation scripts for tools without standard package management.
 
 ### Note
 The dependency management feature is still in development and may not work as expected.
@@ -57,29 +57,41 @@ This will build the binary and install it to `/usr/local/bin/`.
 
 ## Configuration
 
-dotcomfy's config file lives at `$HOME/.config/dotcomfy/config.toml`.
+dotcomfy's config file lives at `$HOME/.config/dotcomfy/config.yaml`.
 
 ### Dependencies
 
 You can specify packages that need to be installed in order for the config set to function properly:
-```toml filename="config.toml"
-[dependencies]
+```yaml filename="config.yaml"
+dependencies:
 # Version can be specified for a package being installed from a package manager
-fzf = { version = "0.57.0" }
-# Custom shell scripts for dependency installation can be specified.
-# The `needs` field can be used to specify dependencies that need to be installed before this dependency.
-nvim = { script = "nvim.sh", needs = ["zsh"] }
-# Custom installations can be specified step by step
-nvm = { steps = [ "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash", "source ~/.zshrc" ], needs = ["zsh"] }
-tmux = { version = "latest" }
-# Commands needed after package installation can also be specified
-zsh = { post_install_steps = [ "chsh -s $(which zsh)" ] }
+  fzf:
+    version: 0.57.0
+  # Custom shell scripts for dependency installation can be specified.
+  # The `needs` field can be used to specify dependencies that need to be installed before this dependency.
+  nvim:
+    script: nvim.sh
+    needs:
+      - zsh
+  # Custom installations can be specified step by step
+  nvm:
+    steps:
+      - curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+    needs:
+      - zsh
+  tmux:
+    version: latest
+  # Commands needed after package installation can also be specified
+  zsh:
+    post_install_steps:
+      - chsh -s $(which zsh)
 ```
+
 #### Custom Installation Scripts
 
 Scripts should start with `#!/bin/sh` and should be located in the same directory as the config file.
 ```sh filename="nvim.sh"
-#!/bin/bash
+#!/bin/sh
 
 curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
 sudo rm -rf /opt/nvim
