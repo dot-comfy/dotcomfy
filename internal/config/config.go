@@ -215,8 +215,8 @@ func SetConfig() {
 		LOGGER.Fatal(err)
 	}
 	viper.AddConfigPath(cfg + "/dotcomfy/") // Config file lives in $HOME/.config/dotcomfy/
-	viper.SetConfigName("config.toml")
-	viper.SetConfigType("toml")
+	viper.SetConfigName("config.yaml")
+	viper.SetConfigType("yaml")
 	err = viper.ReadInConfig()
 	if err != nil {
 		LOGGER.Error(err)
