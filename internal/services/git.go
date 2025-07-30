@@ -5,17 +5,17 @@ import (
 	"os"
 	"strings"
 
-	// "os/user"
-	// "time"
+	"os/user"
+	"time"
 
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
+	GitConfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 
-	// "github.com/go-git/go-git/v5/plumbing/object"
-	//"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 
-	// Config "dotcomfy/internal/config"
+	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
 )
 
@@ -83,8 +83,8 @@ func Pull(repo_path string) error {
 	err = repo.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
 		Force:      true,
-		RefSpecs: []config.RefSpec{
-			config.RefSpec("+refs/heads/" + branch_name + ":refs/remotes/origin/" + branch_name),
+		RefSpecs: []GitConfig.RefSpec{
+			GitConfig.RefSpec("+refs/heads/" + branch_name + ":refs/remotes/origin/" + branch_name),
 		},
 	})
 	if err != nil && err != git.NoErrAlreadyUpToDate {
@@ -147,7 +147,9 @@ func Pull(repo_path string) error {
 	return nil
 }
 
-/*
+/*************************************
+ * TODO: Specify branch to push to   *
+ *************************************/
 func Push(repo_path string) error {
 	var repo_url string
 	var branch string
@@ -155,6 +157,17 @@ func Push(repo_path string) error {
 
 	config := Config.GetConfig()
 	auth := config.Auth
+
+	ssh_key, err := os.ReadFile(auth.GetSSHKeyPath())
+	if err != nil {
+		LOGGER.Errorf("Error reading the ssh key: %v", err)
+		return err
+	}
+
+	ssh_auth, err := ssh.NewPublicKeys("git", ssh_key, auth.GetSSHKeyPassphrase())
+	if err != nil {
+		LOGGER.Errorf("Error creating the SSH authenticatior: %v", err)
+	}
 
 	repo, err := git.PlainOpen(repo_path)
 	if err != nil {
@@ -168,6 +181,7 @@ func Push(repo_path string) error {
 		return err
 	}
 
+	// Grab URL to be pushed to? Do I need this?
 	urls := remote.Config().URLs
 	if len(urls) > 0 {
 		repo_url = urls[0]
@@ -181,13 +195,21 @@ func Push(repo_path string) error {
 		return err
 	}
 
+	err = worktree.AddWithOptions(&git.AddOptions{
+		All: true,
+	})
+	if err != nil {
+		LOGGER.Errorf("Error staging all changes: %v", err)
+		return err
+	}
+
 	head, err := repo.Head()
 	if err != nil {
 		LOGGER.Errorf("Error getting HEAD: %v", err)
 		return err
 	}
 
-	branch = head.Name().Short()
+	branch = string(head.Name())
 
 	status, err := worktree.Status()
 	if err != nil {
@@ -200,18 +222,14 @@ func Push(repo_path string) error {
 		return nil
 	}
 
-	for file, s := range status {
-		fmt.Println("Staging %s: %s", file, s.Worktree)
-		_, err = worktree.Add(file)
-		if err != nil {
-			LOGGER.Errorf("Error adding %s: %v", file, err)
-			failed_files = append(failed_files, file)
-		}
-	}
-
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "unknown"
+	}
+
+	username := auth.GetUsername()
+	if err != nil {
+		username = "unknown"
 	}
 
 	commit_message := fmt.Sprintf("Update from %s@%s at %s",
@@ -222,8 +240,8 @@ func Push(repo_path string) error {
 
 	_, err = worktree.Commit(commit_message, &git.CommitOptions{
 		Author: &object.Signature{
-			Name:  auth.Username,
-			Email: auth.Email,
+			Name:  username,
+			Email: auth.GetEmail(),
 			When:  time.Now(),
 		},
 	})
@@ -239,9 +257,13 @@ func Push(repo_path string) error {
 	// }
 
 	err = repo.Push(&git.PushOptions{
+		Auth:       ssh_auth,
 		RemoteName: "origin",
 		Progress:   os.Stdout,
 		Force:      false,
+		RefSpecs: []GitConfig.RefSpec{
+			GitConfig.RefSpec("+refs/heads/" + branch + ":refs/remotes/origin/" + branch),
+		},
 	})
 	if err != nil {
 		LOGGER.Fatalf("Error pushing: %v", err)
@@ -249,4 +271,3 @@ func Push(repo_path string) error {
 
 	return nil
 }
-*/
