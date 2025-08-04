@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"os/user"
+	// "os/user"
 	"time"
 
 	"github.com/go-git/go-git/v5"
@@ -151,9 +151,10 @@ func Pull(repo_path string) error {
  * TODO: Specify branch to push to   *
  *************************************/
 func Push(repo_path string) error {
-	var repo_url string
+	LOGGER = Log.GetLogger()
+	// var repo_url string
 	var branch string
-	var failed_files []string
+	// var failed_files []string
 
 	config := Config.GetConfig()
 	auth := config.Auth
@@ -175,19 +176,15 @@ func Push(repo_path string) error {
 		return err
 	}
 
-	remote, err := repo.Remote("origin")
-	if err != nil {
-		LOGGER.Error("Error getting remote from the origin:", err)
-		return err
-	}
-
 	// Grab URL to be pushed to? Do I need this?
-	urls := remote.Config().URLs
-	if len(urls) > 0 {
-		repo_url = urls[0]
-	} else {
-		LOGGER.Fatal("No URL found for the remote 'origin'")
-	}
+	/*
+		urls := remote.Config().URLs
+		if len(urls) > 0 {
+			repo_url = urls[0]
+		} else {
+			LOGGER.Fatal("No URL found for the remote 'origin'")
+		}
+	*/
 
 	worktree, err := repo.Worktree()
 	if err != nil {
@@ -249,6 +246,12 @@ func Push(repo_path string) error {
 		LOGGER.Fatalf("Error committing: %v", err)
 	}
 
+	remote, err := repo.Remote("origin")
+	if err != nil {
+		LOGGER.Error("Error getting remote from the origin:", err)
+		return err
+	}
+
 	// TODO:
 	// Set up auth for private repos and/or username/password auth at runtime
 	// var auth *http.BasicAuth
@@ -256,7 +259,7 @@ func Push(repo_path string) error {
 
 	// }
 
-	err = repo.Push(&git.PushOptions{
+	err = remote.Push(&git.PushOptions{
 		Auth:       ssh_auth,
 		RemoteName: "origin",
 		Progress:   os.Stdout,
