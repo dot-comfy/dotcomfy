@@ -93,56 +93,124 @@ func Pull(repo_path string) error {
 	}
 
 	remote_ref_name := plumbing.NewRemoteReferenceName("origin", branch_name)
+	fmt.Println("remote ref name:", remote_ref_name)
 	origin_ref, err := repo.Reference(remote_ref_name, true)
 	if err != nil {
 		LOGGER.Errorf("Error getting origin reference: %v", err)
 		return err
 	}
 
+	remote_commit, err := repo.CommitObject(origin_ref.Hash())
+	fmt.Println("remote commit:", remote_commit)
+	if err != nil {
+		LOGGER.Errorf("Error getting origin commit hash: %v", err)
+		return err
+	}
+
+	remote_tree, err := remote_commit.Tree()
+	if err != nil {
+		LOGGER.Errorf("Error getting origin commit tree: %v", err)
+		return err
+	}
+
+	local_ref_name := plumbing.NewBranchReferenceName(branch_name)
+	fmt.Println("local ref name:", local_ref_name)
+	local_ref, err := repo.Reference(local_ref_name, true)
+	if err != nil {
+		LOGGER.Errorf("Error getting local reference: %v", err)
+		return err
+	}
+
+	local_commit, err := repo.CommitObject(local_ref.Hash())
+	fmt.Println("local commit:", local_commit)
+	if err != nil {
+		LOGGER.Errorf("Error getting local commit hash: %v", err)
+		return err
+	}
+
+	local_tree, err := local_commit.Tree()
+	if err != nil {
+		LOGGER.Errorf("Error getting origin commit tree: %v", err)
+		return err
+	}
+
+	changes, err := object.DiffTree(local_tree, remote_tree)
+	if err != nil {
+		LOGGER.Errorf("Error getting changes: %v", err)
+		return err
+	}
+
+	fmt.Println("Changes from local to remote HEAD:")
+	for _, change := range changes {
+		from, to, err := change.Files()
+		if err != nil {
+			return err
+		}
+		action, err := change.Action()
+		if err != nil {
+			return err
+		}
+		fmt.Printf(
+			"%s: %s -> %s (action: %s)\n",
+			change.String(),
+			from,
+			to,
+			action,
+		)
+		// Optionally: print patch
+		patch, err := change.Patch()
+		if err != nil {
+			return err
+		}
+		fmt.Println(patch.String())
+	}
+
 	LOGGER.Errorf("Origin ref after fetch: %s", origin_ref.Hash())
 
-	branch := plumbing.NewBranchReferenceName(branch_name)
-	// Bypass dirty worktree checks and just "fast forward" to the latest commit
-	err = repo.Storer.SetReference(plumbing.NewHashReference(branch, origin_ref.Hash()))
-	if err != nil {
-		LOGGER.Errorf("Error switching local reference to latest from origin: %v", err)
-		return err
-	}
+	/*
+		branch := plumbing.NewBranchReferenceName(branch_name)
+		// Bypass dirty worktree checks and just "fast forward" to the latest commit
+		err = repo.Storer.SetReference(plumbing.NewHashReference(branch, origin_ref.Hash()))
+		if err != nil {
+			LOGGER.Errorf("Error switching local reference to latest from origin: %v", err)
+			return err
+		}
 
-	worktree, err := repo.Worktree()
-	if err != nil {
-		LOGGER.Errorf("Error getting the worktree: %v", err)
-		return err
-	}
+		worktree, err := repo.Worktree()
+		if err != nil {
+			LOGGER.Errorf("Error getting the worktree: %v", err)
+			return err
+		}
 
-	err = worktree.Checkout(&git.CheckoutOptions{
-		Branch: branch,
-		Force:  true,
-	})
-	if err != nil {
-		LOGGER.Errorf("Error checking out branch: %v", err)
-		return err
-	}
+		err = worktree.Checkout(&git.CheckoutOptions{
+			Branch: branch,
+			Force:  true,
+		})
+		if err != nil {
+			LOGGER.Errorf("Error checking out branch: %v", err)
+			return err
+		}
 
-	err = worktree.Pull(&git.PullOptions{
-		RemoteName:    "origin",
-		ReferenceName: branch,
-		SingleBranch:  true,
-		Force:         true,
-		Progress:      os.Stdout, // May omit this, we'll see how it looks
-	})
-	if err != nil && err != git.NoErrAlreadyUpToDate {
-		LOGGER.Errorf("Error pulling: %v", err)
-		return err
-	}
+		err = worktree.Pull(&git.PullOptions{
+			RemoteName:    "origin",
+			ReferenceName: branch,
+			SingleBranch:  true,
+			Force:         true,
+			Progress:      os.Stdout, // May omit this, we'll see how it looks
+		})
+		if err != nil && err != git.NoErrAlreadyUpToDate {
+			LOGGER.Errorf("Error pulling: %v", err)
+			return err
+		}
 
-	head, err = repo.Head()
-	if err != nil {
-		LOGGER.Errorf("Error getting HEAD: %v", err)
-		return err
-	}
+		head, err = repo.Head()
+		if err != nil {
+			LOGGER.Errorf("Error getting HEAD: %v", err)
+			return err
+		}
 
-	fmt.Printf("HEAD is now at %s\n", head.Hash())
+		fmt.Printf("HEAD is now at %s\n", head.Hash())
+	*/
 
 	return nil
 }
