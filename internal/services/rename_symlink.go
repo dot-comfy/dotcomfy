@@ -8,7 +8,11 @@ import (
 	Log "dotcomfy/internal/logger"
 )
 
-// TODO: write documentation
+// TODO:
+//
+// write documentation
+// change `new_path` param to just be `center_path`, performing the TrimPrefix in code before calling this function.
+// for `new_path` var in the below function, just add `dotcomfy_dir` as a prefix
 func RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, new_path string) (string, error) {
 	LOGGER = Log.GetLogger()
 	// center_path represents the path of the directory entry

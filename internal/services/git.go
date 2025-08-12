@@ -11,12 +11,14 @@ import (
 	"github.com/go-git/go-git/v5"
 	GitConfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/utils/merkletrie"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 
 	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
+	"dotcomfy/internal/services"
 )
 
 func Clone(url, branch, commit_hash, path string) error {
@@ -63,6 +65,14 @@ func Clone(url, branch, commit_hash, path string) error {
 
 func Pull(repo_path string) error {
 	LOGGER = Log.GetLogger()
+	user, err := user.Current()
+	if err != nil {
+		os.Exit(1)
+	}
+
+	dotcomfy_dir := user.HomeDir + "/.dotcomfy"
+	old_dotfiles_dir := user.HomeDir + "/.config"
+
 	repo, err := git.PlainOpen(repo_path)
 	if err != nil {
 		LOGGER.Errorf("Error opening the local repo in %s: %v", repo_path, err)
@@ -141,6 +151,8 @@ func Pull(repo_path string) error {
 	}
 
 	fmt.Println("Changes from local to remote HEAD:")
+	// var added_files []string
+	// var deleted_files []string
 	for _, change := range changes {
 		from, to, err := change.Files()
 		if err != nil {
@@ -150,19 +162,33 @@ func Pull(repo_path string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf(
-			"%s: %s -> %s (action: %s)\n",
-			change.String(),
-			from,
-			to,
-			action,
-		)
+
 		// Optionally: print patch
 		patch, err := change.Patch()
 		if err != nil {
 			return err
 		}
-		fmt.Println(patch.String())
+
+		patch_string := patch.String()
+		if err != nil {
+			return err
+		}
+
+		lines := strings.Split(patch_string, "\n")
+		if len(lines) == 0 {
+			continue
+		}
+		fmt.Println(lines[0])
+
+		file_path := strings.TrimPrefix(lines[0], "diff --git a/")
+		file_path = strings.Split(file_path, " ")[0]
+
+		if action == merkletrie.Insert {
+			// Perform RenameSymlinkUnix
+			// TODO: make changes to RenameSymlinkUnix
+			file_path = services.RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, file_path)
+
+		}
 	}
 
 	LOGGER.Errorf("Origin ref after fetch: %s", origin_ref.Hash())
