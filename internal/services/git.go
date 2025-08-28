@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	// "os/user"
+	"os/user"
 	"time"
 
 	"github.com/go-git/go-git/v5"
@@ -18,7 +18,6 @@ import (
 
 	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
-	"dotcomfy/internal/services"
 )
 
 func Clone(url, branch, commit_hash, path string) error {
@@ -150,93 +149,77 @@ func Pull(repo_path string) error {
 		return err
 	}
 
+	LOGGER.Errorf("Origin ref after fetch: %s", origin_ref.Hash())
+
+	branch := plumbing.NewBranchReferenceName(branch_name)
+	// Bypass dirty worktree checks and just "fast forward" to the latest commit
+	err = repo.Storer.SetReference(plumbing.NewHashReference(branch, origin_ref.Hash()))
+	if err != nil {
+		LOGGER.Errorf("Error switching local reference to latest from origin: %v", err)
+		return err
+	}
+
+	worktree, err := repo.Worktree()
+	if err != nil {
+		LOGGER.Errorf("Error getting the worktree: %v", err)
+		return err
+	}
+
+	err = worktree.Checkout(&git.CheckoutOptions{
+		Branch: branch,
+		Force:  true,
+	})
+	if err != nil {
+		LOGGER.Errorf("Error checking out branch: %v", err)
+		return err
+	}
+
+	err = worktree.Pull(&git.PullOptions{
+		RemoteName:    "origin",
+		ReferenceName: branch,
+		SingleBranch:  true,
+		Force:         true,
+		Progress:      os.Stdout, // May omit this, we'll see how it looks
+	})
+	if err != nil && err != git.NoErrAlreadyUpToDate {
+		LOGGER.Errorf("Error pulling: %v", err)
+		return err
+	}
+
+	head, err = repo.Head()
+	if err != nil {
+		LOGGER.Errorf("Error getting HEAD: %v", err)
+		return err
+	}
+
+	fmt.Printf("HEAD is now at %s\n", head.Hash())
 	fmt.Println("Changes from local to remote HEAD:")
-	// var added_files []string
-	// var deleted_files []string
+
 	for _, change := range changes {
-		from, to, err := change.Files()
-		if err != nil {
-			return err
-		}
 		action, err := change.Action()
 		if err != nil {
 			return err
 		}
 
-		// Optionally: print patch
 		patch, err := change.Patch()
 		if err != nil {
 			return err
 		}
 
 		patch_string := patch.String()
-		if err != nil {
-			return err
-		}
 
 		lines := strings.Split(patch_string, "\n")
 		if len(lines) == 0 {
 			continue
 		}
-		fmt.Println(lines[0])
 
 		file_path := strings.TrimPrefix(lines[0], "diff --git a/")
-		file_path = strings.Split(file_path, " ")[0]
+		file_path = "/" + strings.Split(file_path, " ")[0]
 
 		if action == merkletrie.Insert {
-			// Perform RenameSymlinkUnix
-			// TODO: make changes to RenameSymlinkUnix
-			file_path = services.RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, file_path)
-
+			file_path, err = RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, file_path)
 		}
 	}
-
-	LOGGER.Errorf("Origin ref after fetch: %s", origin_ref.Hash())
-
-	/*
-		branch := plumbing.NewBranchReferenceName(branch_name)
-		// Bypass dirty worktree checks and just "fast forward" to the latest commit
-		err = repo.Storer.SetReference(plumbing.NewHashReference(branch, origin_ref.Hash()))
-		if err != nil {
-			LOGGER.Errorf("Error switching local reference to latest from origin: %v", err)
-			return err
-		}
-
-		worktree, err := repo.Worktree()
-		if err != nil {
-			LOGGER.Errorf("Error getting the worktree: %v", err)
-			return err
-		}
-
-		err = worktree.Checkout(&git.CheckoutOptions{
-			Branch: branch,
-			Force:  true,
-		})
-		if err != nil {
-			LOGGER.Errorf("Error checking out branch: %v", err)
-			return err
-		}
-
-		err = worktree.Pull(&git.PullOptions{
-			RemoteName:    "origin",
-			ReferenceName: branch,
-			SingleBranch:  true,
-			Force:         true,
-			Progress:      os.Stdout, // May omit this, we'll see how it looks
-		})
-		if err != nil && err != git.NoErrAlreadyUpToDate {
-			LOGGER.Errorf("Error pulling: %v", err)
-			return err
-		}
-
-		head, err = repo.Head()
-		if err != nil {
-			LOGGER.Errorf("Error getting HEAD: %v", err)
-			return err
-		}
-
-		fmt.Printf("HEAD is now at %s\n", head.Hash())
-	*/
 
 	return nil
 }
