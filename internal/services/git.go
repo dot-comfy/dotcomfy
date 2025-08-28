@@ -102,6 +102,7 @@ func Pull(repo_path string) error {
 	}
 
 	remote_ref_name := plumbing.NewRemoteReferenceName("origin", branch_name)
+	fmt.Println("remote ref name:", remote_ref_name)
 	origin_ref, err := repo.Reference(remote_ref_name, true)
 	if err != nil {
 		LOGGER.Errorf("Error getting origin reference: %v", err)
@@ -187,6 +188,7 @@ func Pull(repo_path string) error {
 		LOGGER.Errorf("Error getting HEAD: %v", err)
 		return err
 	}
+
 
 	LOGGER.Infof("HEAD is now at %s\n", head.Hash())
 	LOGGER.Infof("Changes from local to remote HEAD:")
