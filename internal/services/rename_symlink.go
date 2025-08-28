@@ -3,17 +3,16 @@ package services
 import (
 	"os"
 	"path/filepath"
-	"strings"
 
 	Log "dotcomfy/internal/logger"
 )
 
-// TODO: write documentation
-func RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, new_path string) (string, error) {
+// TODO:
+//
+// write documentation
+func RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, center_path string) (string, error) {
 	LOGGER = Log.GetLogger()
-	// center_path represents the path of the directory entry
-	// with the dotcomfy_path prefix removed.
-	center_path := strings.TrimPrefix(new_path, dotcomfy_dir)
+	new_path := dotcomfy_dir + center_path
 	old_path := old_dotfiles_dir + center_path
 	// Want to check to see if new_entry has a corresponding entry
 	// in old_dotfiles_path. If so, rename corresponding entry to

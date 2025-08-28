@@ -13,14 +13,14 @@ import (
 	"dotcomfy/internal/services"
 )
 
-// syncCmd represents the sync command
-var syncCmd = &cobra.Command{
-	Use:   "sync",
+// pullCmd represents the pull command
+var pullCmd = &cobra.Command{
+	Use:   "pull",
 	Short: "Syncs your dotcomfy installation with the remote repository",
 	Long: `This command will pull the latest changes from the remote repository
 and update your dotcomfy installation accordingly.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("sync called")
+		fmt.Println("pull called")
 		LOGGER = Log.GetLogger()
 		user, err := user.Current()
 		if err != nil {
@@ -35,29 +35,8 @@ and update your dotcomfy installation accordingly.`,
 	},
 }
 
-var pushCmd = &cobra.Command{
-	Use:   "push",
-	Short: "Pushes your local changes",
-	Long: `Pushes your local changes to the remote repository on the current
-branch. Note that you must have write permissions for this to succeed.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("push called")
-
-		/*
-			LOGGER = Log.GetLogger()
-			user, err := user.Current()
-			if err != nil {
-				LOGGER.Fatal(err)
-			}
-			dotcomfy_dir := user.HomeDir + "/.dotcomfy"
-		*/
-	},
-}
-
 func init() {
-	rootCmd.AddCommand(syncCmd)
-
-	syncCmd.AddCommand(pushCmd)
+	rootCmd.AddCommand(pullCmd)
 
 	// Here you will define your flags and configuration settings.
 

@@ -5,17 +5,18 @@ import (
 	"os"
 	"strings"
 
-	// "os/user"
-	// "time"
+	"os/user"
+	"time"
 
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
+	GitConfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/utils/merkletrie"
 
-	// "github.com/go-git/go-git/v5/plumbing/object"
-	//"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 
-	// Config "dotcomfy/internal/config"
+	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
 )
 
@@ -63,6 +64,14 @@ func Clone(url, branch, commit_hash, path string) error {
 
 func Pull(repo_path string) error {
 	LOGGER = Log.GetLogger()
+	user, err := user.Current()
+	if err != nil {
+		os.Exit(1)
+	}
+
+	dotcomfy_dir := user.HomeDir + "/.dotcomfy"
+	old_dotfiles_dir := user.HomeDir + "/.config"
+
 	repo, err := git.PlainOpen(repo_path)
 	if err != nil {
 		LOGGER.Errorf("Error opening the local repo in %s: %v", repo_path, err)
@@ -83,8 +92,8 @@ func Pull(repo_path string) error {
 	err = repo.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
 		Force:      true,
-		RefSpecs: []config.RefSpec{
-			config.RefSpec("+refs/heads/" + branch_name + ":refs/remotes/origin/" + branch_name),
+		RefSpecs: []GitConfig.RefSpec{
+			GitConfig.RefSpec("+refs/heads/" + branch_name + ":refs/remotes/origin/" + branch_name),
 		},
 	})
 	if err != nil && err != git.NoErrAlreadyUpToDate {
@@ -99,7 +108,44 @@ func Pull(repo_path string) error {
 		return err
 	}
 
-	LOGGER.Errorf("Origin ref after fetch: %s", origin_ref.Hash())
+	remote_commit, err := repo.CommitObject(origin_ref.Hash())
+	if err != nil {
+		LOGGER.Errorf("Error getting origin commit hash: %v", err)
+		return err
+	}
+
+	remote_tree, err := remote_commit.Tree()
+	if err != nil {
+		LOGGER.Errorf("Error getting origin commit tree: %v", err)
+		return err
+	}
+
+	local_ref_name := plumbing.NewBranchReferenceName(branch_name)
+	local_ref, err := repo.Reference(local_ref_name, true)
+	if err != nil {
+		LOGGER.Errorf("Error getting local reference: %v", err)
+		return err
+	}
+
+	local_commit, err := repo.CommitObject(local_ref.Hash())
+	if err != nil {
+		LOGGER.Errorf("Error getting local commit hash: %v", err)
+		return err
+	}
+
+	local_tree, err := local_commit.Tree()
+	if err != nil {
+		LOGGER.Errorf("Error getting origin commit tree: %v", err)
+		return err
+	}
+
+	changes, err := object.DiffTree(local_tree, remote_tree)
+	if err != nil {
+		LOGGER.Errorf("Error getting changes: %v", err)
+		return err
+	}
+
+	LOGGER.Infof("Origin ref after fetch: %s", origin_ref.Hash())
 
 	branch := plumbing.NewBranchReferenceName(branch_name)
 	// Bypass dirty worktree checks and just "fast forward" to the latest commit
@@ -142,19 +188,60 @@ func Pull(repo_path string) error {
 		return err
 	}
 
-	fmt.Printf("HEAD is now at %s\n", head.Hash())
+	LOGGER.Infof("HEAD is now at %s\n", head.Hash())
+	LOGGER.Infof("Changes from local to remote HEAD:")
+
+	for _, change := range changes {
+		action, err := change.Action()
+		if err != nil {
+			return err
+		}
+
+		patch, err := change.Patch()
+		if err != nil {
+			return err
+		}
+
+		patch_string := patch.String()
+
+		lines := strings.Split(patch_string, "\n")
+		if len(lines) == 0 {
+			continue
+		}
+
+		file_path := strings.TrimPrefix(lines[0], "diff --git a/")
+		file_path = "/" + strings.Split(file_path, " ")[0]
+
+		if action == merkletrie.Insert {
+			file_path, err = RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, file_path)
+		}
+	}
 
 	return nil
 }
 
-/*
+/*************************************
+ * TODO: Specify branch to push to   *
+ *************************************/
 func Push(repo_path string) error {
-	var repo_url string
+	LOGGER = Log.GetLogger()
+	// var repo_url string
 	var branch string
-	var failed_files []string
+	// var failed_files []string
 
 	config := Config.GetConfig()
 	auth := config.Auth
+
+	ssh_key, err := os.ReadFile(auth.GetSSHKeyPath())
+	if err != nil {
+		LOGGER.Errorf("Error reading the ssh key: %v", err)
+		return err
+	}
+
+	ssh_auth, err := ssh.NewPublicKeys("git", ssh_key, auth.GetSSHKeyPassphrase())
+	if err != nil {
+		LOGGER.Errorf("Error creating the SSH authenticatior: %v", err)
+	}
 
 	repo, err := git.PlainOpen(repo_path)
 	if err != nil {
@@ -162,22 +249,27 @@ func Push(repo_path string) error {
 		return err
 	}
 
-	remote, err := repo.Remote("origin")
-	if err != nil {
-		LOGGER.Error("Error getting remote from the origin:", err)
-		return err
-	}
-
-	urls := remote.Config().URLs
-	if len(urls) > 0 {
-		repo_url = urls[0]
-	} else {
-		LOGGER.Fatal("No URL found for the remote 'origin'")
-	}
+	// Grab URL to be pushed to? Do I need this?
+	/*
+		urls := remote.Config().URLs
+		if len(urls) > 0 {
+			repo_url = urls[0]
+		} else {
+			LOGGER.Fatal("No URL found for the remote 'origin'")
+		}
+	*/
 
 	worktree, err := repo.Worktree()
 	if err != nil {
 		LOGGER.Errorf("Error getting the worktree: %v", err)
+		return err
+	}
+
+	err = worktree.AddWithOptions(&git.AddOptions{
+		All: true,
+	})
+	if err != nil {
+		LOGGER.Errorf("Error staging all changes: %v", err)
 		return err
 	}
 
@@ -187,7 +279,7 @@ func Push(repo_path string) error {
 		return err
 	}
 
-	branch = head.Name().Short()
+	branch = string(head.Name())
 
 	status, err := worktree.Status()
 	if err != nil {
@@ -200,18 +292,14 @@ func Push(repo_path string) error {
 		return nil
 	}
 
-	for file, s := range status {
-		fmt.Println("Staging %s: %s", file, s.Worktree)
-		_, err = worktree.Add(file)
-		if err != nil {
-			LOGGER.Errorf("Error adding %s: %v", file, err)
-			failed_files = append(failed_files, file)
-		}
-	}
-
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "unknown"
+	}
+
+	username := auth.GetUsername()
+	if err != nil {
+		username = "unknown"
 	}
 
 	commit_message := fmt.Sprintf("Update from %s@%s at %s",
@@ -222,13 +310,19 @@ func Push(repo_path string) error {
 
 	_, err = worktree.Commit(commit_message, &git.CommitOptions{
 		Author: &object.Signature{
-			Name:  auth.Username,
-			Email: auth.Email,
+			Name:  username,
+			Email: auth.GetEmail(),
 			When:  time.Now(),
 		},
 	})
 	if err != nil {
 		LOGGER.Fatalf("Error committing: %v", err)
+	}
+
+	remote, err := repo.Remote("origin")
+	if err != nil {
+		LOGGER.Error("Error getting remote from the origin:", err)
+		return err
 	}
 
 	// TODO:
@@ -238,10 +332,14 @@ func Push(repo_path string) error {
 
 	// }
 
-	err = repo.Push(&git.PushOptions{
+	err = remote.Push(&git.PushOptions{
+		Auth:       ssh_auth,
 		RemoteName: "origin",
 		Progress:   os.Stdout,
 		Force:      false,
+		RefSpecs: []GitConfig.RefSpec{
+			GitConfig.RefSpec("+refs/heads/" + branch + ":refs/remotes/origin/" + branch),
+		},
 	})
 	if err != nil {
 		LOGGER.Fatalf("Error pushing: %v", err)
@@ -249,4 +347,3 @@ func Push(repo_path string) error {
 
 	return nil
 }
-*/
