@@ -102,7 +102,6 @@ func Pull(repo_path string) error {
 	}
 
 	remote_ref_name := plumbing.NewRemoteReferenceName("origin", branch_name)
-	fmt.Println("remote ref name:", remote_ref_name)
 	origin_ref, err := repo.Reference(remote_ref_name, true)
 	if err != nil {
 		LOGGER.Errorf("Error getting origin reference: %v", err)
@@ -110,7 +109,6 @@ func Pull(repo_path string) error {
 	}
 
 	remote_commit, err := repo.CommitObject(origin_ref.Hash())
-	fmt.Println("remote commit:", remote_commit)
 	if err != nil {
 		LOGGER.Errorf("Error getting origin commit hash: %v", err)
 		return err
@@ -123,7 +121,6 @@ func Pull(repo_path string) error {
 	}
 
 	local_ref_name := plumbing.NewBranchReferenceName(branch_name)
-	fmt.Println("local ref name:", local_ref_name)
 	local_ref, err := repo.Reference(local_ref_name, true)
 	if err != nil {
 		LOGGER.Errorf("Error getting local reference: %v", err)
@@ -131,7 +128,6 @@ func Pull(repo_path string) error {
 	}
 
 	local_commit, err := repo.CommitObject(local_ref.Hash())
-	fmt.Println("local commit:", local_commit)
 	if err != nil {
 		LOGGER.Errorf("Error getting local commit hash: %v", err)
 		return err
@@ -149,7 +145,7 @@ func Pull(repo_path string) error {
 		return err
 	}
 
-	LOGGER.Errorf("Origin ref after fetch: %s", origin_ref.Hash())
+	LOGGER.Infof("Origin ref after fetch: %s", origin_ref.Hash())
 
 	branch := plumbing.NewBranchReferenceName(branch_name)
 	// Bypass dirty worktree checks and just "fast forward" to the latest commit
@@ -192,8 +188,8 @@ func Pull(repo_path string) error {
 		return err
 	}
 
-	fmt.Printf("HEAD is now at %s\n", head.Hash())
-	fmt.Println("Changes from local to remote HEAD:")
+	LOGGER.Infof("HEAD is now at %s\n", head.Hash())
+	LOGGER.Infof("Changes from local to remote HEAD:")
 
 	for _, change := range changes {
 		action, err := change.Action()
