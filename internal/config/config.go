@@ -120,10 +120,10 @@ func (c *Config) SetDependencyNames() {
 
 // TODO: I need to do error handling on these getters since they may not exist
 type Auth struct {
-	Username         string `toml:username,omitempty`
-	Email            string `toml:email,omitempty`
-	SSHKeyPath       string `toml:ssh_file,omitempty`
-	SSHKeyPassphrase string `toml:ssh_key_passphrase,omitempty`
+	Username         string `yaml:username,omitempty`
+	Email            string `yaml:email,omitempty`
+	SSHKeyPath       string `yaml:ssh_file,omitempty`
+	SSHKeyPassphrase string `yaml:ssh_key_passphrase,omitempty`
 }
 
 func (g *Auth) GetUsername() string {
