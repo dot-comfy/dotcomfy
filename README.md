@@ -59,6 +59,14 @@ make install INSTALL_DIR=~/bin
 - Uninstalls the currently installed config set.
 - `--yes` autoconfirms the uninstallation process.
 
+### Pull
+`dotcomfy pull`
+- Pull gets the latest changes from the current branch of the dotcomfy installation. Please note that any files locally changed that conflict with changes being pulled in **will automatically be overwritten**.
+
+### Push
+`dotcomfy push`
+- _In progress_
+
 ## Configuration
 
 dotcomfy's config file lives at `$HOME/.config/dotcomfy/config.yaml`.
