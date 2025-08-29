@@ -31,10 +31,14 @@ The dependency management feature is still in development and may not work as ex
 git clone https://github.com/dot-comfy/dotcomfy.git
 cd dotcomfy
 make build
-sudo make install
+make install
 ```
 
 This will build the binary and install it to `/usr/local/bin/`.
+If you want to specify a different directory for installation, you can specify it in the `make install` command:
+```bash
+make install INSTALL_DIR=~/bin
+```
 
 ## Usage
 
