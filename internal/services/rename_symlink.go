@@ -19,8 +19,8 @@ func RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, center_path string) (stri
 	// {corresponding_entry}.pre-dotcomfy, put new_entry symlink in its place.
 	_, err := os.Stat(old_path)
 	if err == nil {
-		new_path = new_path + ".pre-dotcomfy"
-		err = os.Rename(old_path, new_path)
+		old_path_renamed := old_path + ".pre-dotcomfy"
+		err = os.Rename(old_path, old_path_renamed)
 		if err != nil {
 			LOGGER.Error(err)
 			return "", err

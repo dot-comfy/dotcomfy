@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -20,14 +21,17 @@ func RemoveInstallation(dotcomfy_dir, old_dotfiles_dir string) (err error) {
 			if !strings.Contains(path, ".git") && !strings.Contains(path, dotcomfy_dir+"README.md") {
 				center_path := strings.TrimPrefix(path, dotcomfy_dir)
 				old_path := old_dotfiles_dir + center_path
-				if strings.Contains(old_path, ".pre-dotcomfy") {
-					old_name := strings.Replace(old_path, ".pre-dotcomfy", "", 1)
+				//LOGGER.Errorf(old_path)
+				_, err := os.Stat(old_path + ".pre-dotcomfy")
+				//LOGGER.Error(err)
+				if err == nil {
 					// Remove symlink
 					err = os.Remove(old_path)
+					LOGGER.Errorf("Removed %s", old_path)
 					if err != nil {
 						LOGGER.Warn(err)
 					}
-					err = os.Rename(old_path, old_name)
+					err = os.Rename(old_path+".pre-dotcomfy", old_path)
 					if err != nil {
 						LOGGER.Warn(err)
 					}
@@ -38,6 +42,27 @@ func RemoveInstallation(dotcomfy_dir, old_dotfiles_dir string) (err error) {
 					}
 				}
 			}
+		}
+		return nil
+	})
+
+	err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			center_path := strings.TrimPrefix(path, dotcomfy_dir)
+			old_path := old_dotfiles_dir + center_path
+
+			not_empty, err := directoryContainsFiles(old_path)
+			if err != nil {
+				LOGGER.Warn(err)
+			} else {
+				if !not_empty {
+					err = os.RemoveAll(old_path)
+					if err != nil {
+						LOGGER.Info(err)
+					}
+				}
+			}
+
 		}
 		return nil
 	})
@@ -89,4 +114,18 @@ func RemoveInstallation(dotcomfy_dir, old_dotfiles_dir string) (err error) {
 		}
 	}
 	return nil
+}
+
+func directoryContainsFiles(dir_path string) (bool, error) {
+	entries, err := os.ReadDir(dir_path)
+	if err != nil {
+		return false, fmt.Errorf("failed to read directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			return true, nil // Found a file
+		}
+	}
+	return false, nil // No files found
 }
