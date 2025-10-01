@@ -21,13 +21,10 @@ func RemoveInstallation(dotcomfy_dir, old_dotfiles_dir string) (err error) {
 			if !strings.Contains(path, ".git") && !strings.Contains(path, dotcomfy_dir+"README.md") {
 				center_path := strings.TrimPrefix(path, dotcomfy_dir)
 				old_path := old_dotfiles_dir + center_path
-				//LOGGER.Errorf(old_path)
 				_, err := os.Stat(old_path + ".pre-dotcomfy")
-				//LOGGER.Error(err)
 				if err == nil {
 					// Remove symlink
 					err = os.Remove(old_path)
-					LOGGER.Errorf("Removed %s", old_path)
 					if err != nil {
 						LOGGER.Warn(err)
 					}
