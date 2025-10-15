@@ -102,7 +102,6 @@ func Pull(repo_path string) error {
 	}
 
 	remote_ref_name := plumbing.NewRemoteReferenceName("origin", branch_name)
-	fmt.Println("remote ref name:", remote_ref_name)
 	origin_ref, err := repo.Reference(remote_ref_name, true)
 	if err != nil {
 		LOGGER.Errorf("Error getting origin reference: %v", err)
@@ -233,6 +232,60 @@ func Push(repo_path string) error {
 	config := Config.GetConfig()
 	auth := config.Auth
 
+	repo, err := git.PlainOpen(repo_path)
+	if err != nil {
+		LOGGER.Errorf("Error opening the local repo in %s: %v", repo_path, err)
+		return err
+	}
+
+	head, err := repo.Head()
+	if err != nil {
+		LOGGER.Errorf("Error getting HEAD: %v", err)
+		return err
+	}
+
+	// Get branch name
+	branch_name := string(head.Name())
+	if strings.HasPrefix(branch_name, "refs/heads/") {
+		branch_name = strings.TrimPrefix(branch_name, "refs/heads/")
+	}
+
+	// Fetch to see if there are any changes to the remote branch
+	err = repo.Fetch(&git.FetchOptions{
+		RemoteName: "origin",
+		Force:      true,
+		RefSpecs: []GitConfig.RefSpec{
+			GitConfig.RefSpec("+refs/heads/" + branch_name + ":refs/remotes/origin/" + branch_name),
+		},
+	})
+	if err != nil && err != git.NoErrAlreadyUpToDate {
+		LOGGER.Errorf("Error fetching: %v", err)
+		return err
+	}
+
+	remote_ref_name := plumbing.NewRemoteReferenceName("origin", branch_name)
+	origin_ref, err := repo.Reference(remote_ref_name, true)
+	if err != nil {
+		LOGGER.Errorf("Error getting origin reference: %v", err)
+		return err
+	}
+
+	local_ref_name := plumbing.NewBranchReferenceName(branch_name)
+	local_ref, err := repo.Reference(local_ref_name, true)
+	if err != nil {
+		LOGGER.Errorf("Error getting local reference: %v", err)
+		return err
+	}
+
+	// Error out if remote branch is ahead of local
+	// TODO: How to proceed if this is the case? `dotcomfy pull`
+	//		 will just overwrite the user's local changes
+	if local_ref.Hash() != origin_ref.Hash() {
+		fmt.Printf("Remote branch is ahead of local branch, please pull changes before updating")
+		LOGGER.Fatalf("Remote branch is ahead of local branch, please pull changes before updating")
+	}
+
+	// Get SSH key
 	ssh_key, err := os.ReadFile(auth.GetSSHKeyPath())
 	if err != nil {
 		LOGGER.Errorf("Error reading the ssh key: %v", err)
@@ -242,12 +295,6 @@ func Push(repo_path string) error {
 	ssh_auth, err := ssh.NewPublicKeys("git", ssh_key, auth.GetSSHKeyPassphrase())
 	if err != nil {
 		LOGGER.Errorf("Error creating the SSH authenticatior: %v", err)
-	}
-
-	repo, err := git.PlainOpen(repo_path)
-	if err != nil {
-		LOGGER.Errorf("Error opening the local repo in %s: %v", repo_path, err)
-		return err
 	}
 
 	// Grab URL to be pushed to? Do I need this?
