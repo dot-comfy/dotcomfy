@@ -86,7 +86,10 @@ func run(cmd *cobra.Command, args []string) {
 		}
 
 		if !d.IsDir() && !strings.Contains(path, ".git") && !strings.Contains(path, "README.md") {
-			_, err = services.RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, path)
+			// center_path represents the path of the directory entry
+			// with the dotcomfy_path prefix removed.
+			center_path := strings.TrimPrefix(path, dotcomfy_dir)
+			_, err = services.RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, center_path)
 			if err != nil {
 				LOGGER.Error(err)
 				return err

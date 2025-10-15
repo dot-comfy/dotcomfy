@@ -5,12 +5,13 @@ import (
 	"os"
 	"strings"
 
-	// "os/user"
+	"os/user"
 	"time"
 
 	"github.com/go-git/go-git/v5"
 	GitConfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/utils/merkletrie"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
@@ -63,6 +64,14 @@ func Clone(url, branch, commit_hash, path string) error {
 
 func Pull(repo_path string) error {
 	LOGGER = Log.GetLogger()
+	user, err := user.Current()
+	if err != nil {
+		os.Exit(1)
+	}
+
+	dotcomfy_dir := user.HomeDir + "/.dotcomfy"
+	old_dotfiles_dir := user.HomeDir + "/.config"
+
 	repo, err := git.PlainOpen(repo_path)
 	if err != nil {
 		LOGGER.Errorf("Error opening the local repo in %s: %v", repo_path, err)
@@ -93,13 +102,51 @@ func Pull(repo_path string) error {
 	}
 
 	remote_ref_name := plumbing.NewRemoteReferenceName("origin", branch_name)
+	fmt.Println("remote ref name:", remote_ref_name)
 	origin_ref, err := repo.Reference(remote_ref_name, true)
 	if err != nil {
 		LOGGER.Errorf("Error getting origin reference: %v", err)
 		return err
 	}
 
-	LOGGER.Errorf("Origin ref after fetch: %s", origin_ref.Hash())
+	remote_commit, err := repo.CommitObject(origin_ref.Hash())
+	if err != nil {
+		LOGGER.Errorf("Error getting origin commit hash: %v", err)
+		return err
+	}
+
+	remote_tree, err := remote_commit.Tree()
+	if err != nil {
+		LOGGER.Errorf("Error getting origin commit tree: %v", err)
+		return err
+	}
+
+	local_ref_name := plumbing.NewBranchReferenceName(branch_name)
+	local_ref, err := repo.Reference(local_ref_name, true)
+	if err != nil {
+		LOGGER.Errorf("Error getting local reference: %v", err)
+		return err
+	}
+
+	local_commit, err := repo.CommitObject(local_ref.Hash())
+	if err != nil {
+		LOGGER.Errorf("Error getting local commit hash: %v", err)
+		return err
+	}
+
+	local_tree, err := local_commit.Tree()
+	if err != nil {
+		LOGGER.Errorf("Error getting origin commit tree: %v", err)
+		return err
+	}
+
+	changes, err := object.DiffTree(local_tree, remote_tree)
+	if err != nil {
+		LOGGER.Errorf("Error getting changes: %v", err)
+		return err
+	}
+
+	LOGGER.Infof("Origin ref after fetch: %s", origin_ref.Hash())
 
 	branch := plumbing.NewBranchReferenceName(branch_name)
 	// Bypass dirty worktree checks and just "fast forward" to the latest commit
@@ -142,7 +189,34 @@ func Pull(repo_path string) error {
 		return err
 	}
 
-	fmt.Printf("HEAD is now at %s\n", head.Hash())
+	LOGGER.Infof("HEAD is now at %s\n", head.Hash())
+	LOGGER.Infof("Changes from local to remote HEAD:")
+
+	for _, change := range changes {
+		action, err := change.Action()
+		if err != nil {
+			return err
+		}
+
+		patch, err := change.Patch()
+		if err != nil {
+			return err
+		}
+
+		patch_string := patch.String()
+
+		lines := strings.Split(patch_string, "\n")
+		if len(lines) == 0 {
+			continue
+		}
+
+		file_path := strings.TrimPrefix(lines[0], "diff --git a/")
+		file_path = "/" + strings.Split(file_path, " ")[0]
+
+		if action == merkletrie.Insert {
+			file_path, err = RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, file_path)
+		}
+	}
 
 	return nil
 }

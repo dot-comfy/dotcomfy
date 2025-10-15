@@ -12,8 +12,8 @@ import (
 )
 
 type Config struct {
-	Dependencies map[string]Dependency `toml:"dependencies,omitempty"`
-	Auth         Auth                  `toml:authentication,omitempty`
+	Dependencies map[string]Dependency `yaml:"dependencies,omitempty"`
+	Auth         Auth                  `yaml:"authentication,omitempty"`
 }
 
 // TODO: Find a way to pull config file down first from the repo if it exists to validate before installation
@@ -120,10 +120,10 @@ func (c *Config) SetDependencyNames() {
 
 // TODO: I need to do error handling on these getters since they may not exist
 type Auth struct {
-	Username         string `toml:username,omitempty`
-	Email            string `toml:email,omitempty`
-	SSHKeyPath       string `toml:ssh_file,omitempty`
-	SSHKeyPassphrase string `toml:ssh_key_passphrase,omitempty`
+	Username         string `yaml:"username,omitempty"`
+	Email            string `yaml:"email,omitempty"`
+	SSHKeyPath       string `yaml:"ssh_file,omitempty"`
+	SSHKeyPassphrase string `yaml:"ssh_key_passphrase,omitempty"`
 }
 
 func (g *Auth) GetUsername() string {
@@ -143,13 +143,13 @@ func (g *Auth) GetSSHKeyPassphrase() string {
 }
 
 type Dependency struct {
-	Name              string   `toml:"name,omitempty"`
-	Needs             []string `toml:"needs,omitempty"`
-	PostInstallSteps  []string `toml:"post_install_steps,omitempty"`
-	PostInstallScript string   `toml:"post_install_script,omitempty"`
-	Steps             []string `toml:"steps,omitempty"`
-	Script            string   `toml:"script,omitempty"`
-	Version           string   `toml:"version,omitempty"`
+	Name              string   `yaml:"name,omitempty"`
+	Needs             []string `yaml:"needs,omitempty"`
+	PostInstallSteps  []string `yaml:"post_install_steps,omitempty"`
+	PostInstallScript string   `yaml:"post_install_script,omitempty"`
+	Steps             []string `yaml:"steps,omitempty"`
+	Script            string   `yaml:"script,omitempty"`
+	Version           string   `yaml:"version,omitempty"`
 	Installed         bool
 	FailedInstall     bool
 }
@@ -216,11 +216,11 @@ var config *Config
 
 func SetConfig() {
 	LOGGER := Log.GetLogger()
-	cfg, err := os.UserConfigDir()
+	cfg, err := os.UserHomeDir()
 	if err != nil {
 		LOGGER.Fatal(err)
 	}
-	viper.AddConfigPath(cfg + "/dotcomfy/") // Config file lives in $HOME/.config/dotcomfy/
+	viper.AddConfigPath(cfg + "/.config/dotcomfy/") // Config file lives in $HOME/.config/dotcomfy/
 	viper.SetConfigName("config.yaml")
 	viper.SetConfigType("yaml")
 	err = viper.ReadInConfig()

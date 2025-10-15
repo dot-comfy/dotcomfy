@@ -47,21 +47,14 @@ check-test:
 
 .PHONY: check-test
 
-BINDIR = /usr/local/bin
-BINARY = ./bin/dotcomfy
-
-install:
-	@echo "Installing dotcomfy to $(BINDIR)"
-	sudo install -m 755 $(BINARY) $(BINDIR)
-
-.PHONY: test-%
-
 # Running `test-install` will run `tests/scripts/install.sh` from inside the
 # container.
 test-%:
 	$(MAKE) TEST_SCRIPT=$*.sh check-test build-container
 	@echo "Running test $*.sh in container ..."
 	$(CONTAINER_RUNTIME) run --rm $(IMAGE_NAME):$(IMAGE_TAG) bash $(TEST_DIR)/$*.sh
+
+.PHONY: test-%
 
 # This runs all the test scripts
 test:
@@ -72,3 +65,12 @@ test:
 	done
 
 .PHONY: test
+
+INSTALL_DIR ?= /usr/local/bin
+BINARY_NAME = dotcomfy
+
+install:
+	sudo cp bin/$(BINARY_NAME) $(INSTALL_DIR)/$(BINARY_NAME)
+	sudo chmod +x $(INSTALL_DIR)/$(BINARY_NAME)
+
+.PHONY: install
