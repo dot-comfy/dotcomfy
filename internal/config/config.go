@@ -227,7 +227,42 @@ func SetConfig() {
 	if err != nil {
 		LOGGER.Error(err)
 	}
-	viper.Unmarshal(&config)
+
+	config = &Config{}
+
+	err = viper.UnmarshalKey("dependencies", &config.Dependencies)
+	if err != nil {
+		LOGGER.Error("Dependencies unmarshal error:", err)
+	}
+
+	err = viper.UnmarshalKey("authentication", &config.Auth)
+	if err != nil {
+		LOGGER.Error("Authentication unmarshal error:", err)
+	}
+
+	// Manually populate Auth struct since unmarshaling seems to have issues
+	config.Auth = Auth{
+		Username:         viper.GetString("authentication.username"),
+		Email:            viper.GetString("authentication.email"),
+		SSHKeyPath:       viper.GetString("authentication.ssh_file"),
+		SSHKeyPassphrase: viper.GetString("authentication.ssh_key_passphrase"),
+	}
+
+	home_dir, err := os.UserHomeDir()
+	if err != nil {
+		LOGGER.Fatal("Failed getting user home directory", err)
+	}
+
+	// Expand '~' to user's home directory if it exists in the string
+	if strings.Contains(viper.GetString("authentication.ssh_file"), "~") {
+		config.Auth.SSHKeyPath = strings.Replace(
+			viper.GetString("authentication.ssh_file"),
+			"~",
+			home_dir,
+			1,
+		)
+	}
+
 	config.SetDependencyNames()
 }
 

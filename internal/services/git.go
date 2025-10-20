@@ -221,7 +221,7 @@ func Pull(repo_path string) error {
 }
 
 /*************************************
- * TODO: Specify branch to push to   *
+ * TODO: *
  *************************************/
 func Push(repo_path string) error {
 	LOGGER = Log.GetLogger()
@@ -261,6 +261,10 @@ func Push(repo_path string) error {
 	if err != nil && err != git.NoErrAlreadyUpToDate {
 		LOGGER.Errorf("Error fetching: %v", err)
 		return err
+		// } else if err == git.NoErrAlreadyUpToDate {
+		// 	LOGGER.Infof("Nothing to change")
+		// 	fmt.Print("Nothing to change")
+		// 	os.Exit(0)
 	}
 
 	remote_ref_name := plumbing.NewRemoteReferenceName("origin", branch_name)
@@ -278,14 +282,14 @@ func Push(repo_path string) error {
 	}
 
 	// Error out if remote branch is ahead of local
-	// TODO: How to proceed if this is the case? `dotcomfy pull`
-	//		 will just overwrite the user's local changes
 	if local_ref.Hash() != origin_ref.Hash() {
-		fmt.Printf("Remote branch is ahead of local branch, please pull changes before updating")
-		LOGGER.Fatalf("Remote branch is ahead of local branch, please pull changes before updating")
+		fmt.Printf("Remote branch is ahead of local branch. You may want to handle pulling in the latest changes using git, as running 'dotcomfy pull' will overwrite all of your local changes.")
+		LOGGER.Fatalf("Remote branch is ahead of local branch. You may want to handle pulling in the latest changes using git, as running 'dotcomfy pull' will overwrite all of your local changes.")
 	}
 
 	// Get SSH key
+	fmt.Println(auth.SSHKeyPath)
+	fmt.Println(config)
 	ssh_key, err := os.ReadFile(auth.GetSSHKeyPath())
 	if err != nil {
 		LOGGER.Errorf("Error reading the ssh key: %v", err)
@@ -313,29 +317,25 @@ func Push(repo_path string) error {
 		return err
 	}
 
-	err = worktree.AddWithOptions(&git.AddOptions{
-		All: true,
-	})
-	if err != nil {
-		LOGGER.Errorf("Error staging all changes: %v", err)
-		return err
-	}
-
-	head, err := repo.Head()
-	if err != nil {
-		LOGGER.Errorf("Error getting HEAD: %v", err)
-		return err
-	}
-
-	branch = string(head.Name())
-
+	// Simple error-tolerant approach
 	status, err := worktree.Status()
 	if err != nil {
 		LOGGER.Errorf("Error getting status: %v", err)
 		return err
 	}
 
-	if status.IsClean() {
+	hasChanges := false
+	for file := range status {
+		_, err = worktree.Add(file)
+		if err != nil {
+			// Log warning but continue - empty directories can't be added anyway
+			LOGGER.Warnf("Could not add %s (likely empty directory): %v", file, err)
+			continue
+		}
+		hasChanges = true
+	}
+
+	if !hasChanges {
 		fmt.Println("No changes to commit")
 		return nil
 	}
@@ -386,7 +386,7 @@ func Push(repo_path string) error {
 		Progress:   os.Stdout,
 		Force:      false,
 		RefSpecs: []GitConfig.RefSpec{
-			GitConfig.RefSpec("+refs/heads/" + branch + ":refs/remotes/origin/" + branch),
+			GitConfig.RefSpec("+refs/heads/" + branch_name + ":refs/remotes/origin/" + branch),
 		},
 	})
 	if err != nil {
