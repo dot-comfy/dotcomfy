@@ -60,6 +60,7 @@ func run(cmd *cobra.Command, args []string) {
 		} else {
 			url = args[0]
 		}
+		temp_cfg_file_path, err := services.DownloadConfigFile(url, BRANCH)
 		err = services.Clone(url, BRANCH, COMMIT, dotcomfy_dir)
 
 		if err != nil {
@@ -68,6 +69,7 @@ func run(cmd *cobra.Command, args []string) {
 		}
 	} else {
 		url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
+		temp_cfg_file_path, err := services.DownloadConfigFile(url, BRANCH)
 		err = services.Clone(url, BRANCH, COMMIT, dotcomfy_dir)
 		if err != nil {
 			LOGGER.Error(err)

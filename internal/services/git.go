@@ -22,16 +22,54 @@ import (
 
 func Clone(url, branch, commit_hash, path string) error {
 	LOGGER = Log.GetLogger()
-	// @REF [Basic go-git example](https://github.com/go-git/go-git/blob/master/_examples/clone/main.go)
-	repo, err := git.PlainClone(path, false, &git.CloneOptions{
-		URL:               url, // Guaranteed at least one because cobra
-		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-		ReferenceName:     plumbing.ReferenceName(branch),
-		SingleBranch:      true,
-	})
+
+	// Default to clone with ssh
+	https_clone := false
+
+	// TODO: Put this ssh auth creation into its own function
+	config := Config.GetConfig()
+	auth := config.Auth
+
+	ssh_key, err := os.ReadFile(auth.GetSSHKeyPath())
 	if err != nil {
-		LOGGER.Error(err)
-		return err
+		LOGGER.Infof("Error reading the ssh key: %v", err)
+		https_clone = true
+	}
+
+	ssh_auth, err := ssh.NewPublicKeys("git", ssh_key, auth.GetSSHKeyPassphrase())
+	if err != nil {
+		LOGGER.Infof("Error creating the SSH authenticatior: %v", err)
+		https_clone = true
+	}
+
+	var repo *git.Repository
+
+	if https_clone == false {
+		LOGGER.Info("Cloning with SSH")
+		repo, err = git.PlainClone(path, false, &git.CloneOptions{
+			URL:               url, // Guaranteed at least one because cobra
+			Auth:              ssh_auth,
+			RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+			ReferenceName:     plumbing.ReferenceName(branch),
+			SingleBranch:      true,
+		})
+		if err != nil {
+			LOGGER.Error(err)
+			return err
+		}
+	} else {
+		LOGGER.Info("Cloning with HTTPS")
+		// @REF [Basic go-git example](https://github.com/go-git/go-git/blob/master/_examples/clone/main.go)
+		repo, err = git.PlainClone(path, false, &git.CloneOptions{
+			URL:               url, // Guaranteed at least one because cobra
+			RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+			ReferenceName:     plumbing.ReferenceName(branch),
+			SingleBranch:      true,
+		})
+		if err != nil {
+			LOGGER.Error(err)
+			return err
+		}
 	}
 
 	if commit_hash != "" {
@@ -188,7 +226,6 @@ func Pull(repo_path string) error {
 		LOGGER.Errorf("Error getting HEAD: %v", err)
 		return err
 	}
-
 
 	LOGGER.Infof("HEAD is now at %s\n", head.Hash())
 	LOGGER.Infof("Changes from local to remote HEAD:")
