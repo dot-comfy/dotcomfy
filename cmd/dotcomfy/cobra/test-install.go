@@ -6,33 +6,28 @@ package cobra
 import (
 	// "errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"os/user"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 
-	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
 	"dotcomfy/internal/services"
 )
 
-var skip_dependencies bool
-
 // installCmd represents the install command
-var installCmd = &cobra.Command{
-	Use:   "install [GitHub username/repo URL]",
+var testInstallCmd = &cobra.Command{
+	Use:   "test-install [GitHub username/repo URL]",
 	Short: "Install dotfiles from a Git repo",
 	Long: `Install dotfiles from a Git repo. You can pass in just a GitHub username
 	(which will look for the repository "https://github.com/{username}/dotfiles.git"),
 	or the full URL to a Git repo containing dotfiles`,
 	Args: cobra.MinimumNArgs(1),
-	Run:  run,
+	Run:  test_install,
 }
 
-func run(cmd *cobra.Command, args []string) {
+func test_install(cmd *cobra.Command, args []string) {
 	LOGGER = Log.GetLogger()
 	user, err := user.Current()
 	if err != nil {
@@ -41,7 +36,6 @@ func run(cmd *cobra.Command, args []string) {
 	}
 	dotcomfy_dir := user.HomeDir + "/.dotcomfy"
 	// Default to XDG_CONFIG_HOME directory if not set
-	old_dotfiles_dir := user.HomeDir + "/.config"
 
 	if len(args) > 1 {
 		fmt.Println("Too many arguments")
@@ -61,9 +55,8 @@ func run(cmd *cobra.Command, args []string) {
 		} else {
 			url = args[0]
 		}
-		_, err := services.DownloadConfigFile(url, BRANCH)
-		Config.SetTempConfig()
-		err = services.Clone(url, BRANCH, COMMIT, dotcomfy_dir)
+		_, err := services.DownloadConfigFile(args[0], "omarchy")
+		err = services.Clone(url, "omarchy", COMMIT, "/tmp/.dotcomfy/")
 
 		if err != nil {
 			LOGGER.Error(err)
@@ -71,9 +64,9 @@ func run(cmd *cobra.Command, args []string) {
 		}
 	} else {
 		url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
-		_, err := services.DownloadConfigFile(url, BRANCH)
-		Config.SetTempConfig()
-		err = services.Clone(url, BRANCH, COMMIT, dotcomfy_dir)
+		url = "https://raw.githubusercontent.com/ethangamma24/dotfiles/refs/heads/omarchy/dotcomfy/config.yaml"
+		_, err := services.DownloadConfigFile(url, "omarchy")
+		err = services.Clone(url, "omarchy", COMMIT, "/tmp/.dotcomfy/")
 		if err != nil {
 			LOGGER.Error(err)
 		}
@@ -84,40 +77,41 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	// Walk through the cloned repo and perform rename/symlink operations
-	err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			LOGGER.Error(err)
-			return err
-		}
-
-		if !d.IsDir() && !strings.Contains(path, ".git") && !strings.Contains(path, "README.md") {
-			// center_path represents the path of the directory entry
-			// with the dotcomfy_path prefix removed.
-			center_path := strings.TrimPrefix(path, dotcomfy_dir)
-			_, err = services.RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, center_path)
+	/*
+		err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				LOGGER.Error(err)
 				return err
 			}
-		}
-		return nil
-	})
-	if err != nil {
-		LOGGER.Error(err)
-	}
 
-	if !skip_dependencies {
-		err = services.InstallDependenciesLinux()
-
+			if !d.IsDir() && !strings.Contains(path, ".git") && !strings.Contains(path, "README.md") {
+				// center_path represents the path of the directory entry
+				// with the dotcomfy_path prefix removed.
+				center_path := strings.TrimPrefix(path, dotcomfy_dir)
+				_, err = services.RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, center_path)
+				if err != nil {
+					LOGGER.Error(err)
+					return err
+				}
+			}
+			return nil
+		})
 		if err != nil {
 			LOGGER.Error(err)
 		}
-	}
 
+		if !skip_dependencies {
+			err = services.InstallDependenciesLinux()
+
+			if err != nil {
+				LOGGER.Error(err)
+			}
+		}
+	*/
 }
 
 func init() {
-	rootCmd.AddCommand(installCmd)
+	rootCmd.AddCommand(testInstallCmd)
 
 	// Here you will define your flags and configuration settings.
 
@@ -128,7 +122,7 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// installCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	installCmd.PersistentFlags().StringVarP(&BRANCH, "branch", "b", "main", "Branch to clone")
-	installCmd.PersistentFlags().StringVar(&COMMIT, "at-commit", "", "Specific commit hash to install")
-	installCmd.Flags().BoolVar(&skip_dependencies, "skip-dependencies", false, "Skip installing dependencies")
+	// installCmd.PersistentFlags().StringVarP(&BRANCH, "test-branch", "b", "main", "Branch to clone")
+	// installCmd.PersistentFlags().StringVar(&COMMIT, "test-at-commit", "", "Specific commit hash to install")
+	// installCmd.Flags().BoolVar(&skip_dependencies, "test-skip-dependencies", false, "Skip installing dependencies")
 }

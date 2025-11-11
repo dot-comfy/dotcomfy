@@ -13,6 +13,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/spf13/cobra"
 
+	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
 	"dotcomfy/internal/services"
 )
@@ -62,7 +63,8 @@ var switchCmd = &cobra.Command{
 				LOGGER.Fatal("No URL found for the remote 'origin'")
 			}
 
-			temp_cfg_file_path, err := services.DownloadConfigFile(repo_url, BRANCH)
+			_, err = services.DownloadConfigFile(repo_url, BRANCH)
+			Config.SetTempConfig()
 			err = switchDotfiles(dotcomfy_dir, old_dotfiles_dir, repo_url, BRANCH)
 			if err != nil {
 				LOGGER.Fatal(err)
@@ -78,7 +80,8 @@ var switchCmd = &cobra.Command{
 				repo_url = fmt.Sprintf("https://github.com/%s/dotfiles.git", REPO)
 			}
 			LOGGER.Error(err)
-			temp_cfg_file_path, err := services.DownloadConfigFile(repo_url, BRANCH)
+			_, err := services.DownloadConfigFile(repo_url, BRANCH)
+			Config.SetTempConfig()
 			err = switchDotfiles(dotcomfy_dir, old_dotfiles_dir, repo_url, BRANCH)
 			if err != nil {
 				LOGGER.Fatal(err)

@@ -231,6 +231,19 @@ func SetConfig() {
 	config.SetDependencyNames()
 }
 
+func SetTempConfig() {
+	LOGGER := Log.GetLogger()
+	viper.AddConfigPath("/tmp/dotcomfy/")
+	viper.SetConfigName("config.yaml")
+	viper.SetConfigType("yaml")
+	err := viper.ReadInConfig()
+	if err != nil {
+		LOGGER.Error(err)
+	}
+	viper.Unmarshal(&config)
+	config.SetDependencyNames()
+}
+
 func GetConfig() *Config {
 	return config
 }
