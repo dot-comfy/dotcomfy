@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -134,8 +135,18 @@ func (g *Auth) GetEmail() string {
 	return g.Email
 }
 
-func (g *Auth) GetSSHKeyPath() string {
-	return g.SSHFile
+func (g *Auth) GetSSHKeyPath() (string, error) {
+	if strings.HasPrefix(g.SSHFile, "~/") || g.SSHFile == "~" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		if g.SSHFile == "~" {
+			return home, nil
+		}
+		return filepath.Join(home, strings.TrimPrefix(g.SSHFile, "~/")), nil
+	}
+	return g.SSHFile, nil
 }
 
 func (g *Auth) GetSSHKeyPassphrase() string {
