@@ -122,7 +122,7 @@ func (c *Config) SetDependencyNames() {
 type Auth struct {
 	Username         string `yaml:"username,omitempty"`
 	Email            string `yaml:"email,omitempty"`
-	SSHKeyPath       string `yaml:"ssh_file,omitempty"`
+	SSHFile          string `yaml:"ssh_file,omitempty"`
 	SSHKeyPassphrase string `yaml:"ssh_key_passphrase,omitempty"`
 }
 
@@ -135,7 +135,7 @@ func (g *Auth) GetEmail() string {
 }
 
 func (g *Auth) GetSSHKeyPath() string {
-	return g.SSHKeyPath
+	return g.SSHFile
 }
 
 func (g *Auth) GetSSHKeyPassphrase() string {
@@ -227,20 +227,120 @@ func SetConfig() {
 	if err != nil {
 		LOGGER.Error(err)
 	}
+	config = &Config{}
 	viper.Unmarshal(&config)
 	config.SetDependencyNames()
 }
 
-func SetTempConfig() {
+func SetTempConfig(p string) {
 	LOGGER := Log.GetLogger()
-	viper.AddConfigPath("/tmp/dotcomfy/")
-	viper.SetConfigName("config.yaml")
-	viper.SetConfigType("yaml")
-	err := viper.ReadInConfig()
+
+	// Create a new Viper instance to avoid any global state issues
+	v := viper.New()
+	v.AddConfigPath(p)
+	v.SetConfigName("config.yaml")
+	v.SetConfigType("yaml")
+	err := v.ReadInConfig()
 	if err != nil {
 		LOGGER.Error(err)
 	}
-	viper.Unmarshal(&config)
+
+	localConfig := &Config{}
+
+	// Debug what this fresh Viper instance read
+	LOGGER.Info("Fresh Viper all settings:", v.AllSettings())
+	LOGGER.Info("Fresh Viper auth:", v.Get("authentication"))
+
+	// Unmarshal dependencies first
+	var dependencies map[string]Dependency
+	if deps := v.Get("dependencies"); deps != nil {
+		if depMap, ok := deps.(map[string]any); ok {
+			dependencies = make(map[string]Dependency)
+			for key, value := range depMap {
+				if depStruct, ok := value.(map[string]any); ok {
+					dep := Dependency{}
+					for fieldKey, fieldValue := range depStruct {
+						switch fieldKey {
+						case "version":
+							if version, ok := fieldValue.(string); ok {
+								dep.Version = version
+							}
+						case "script":
+							if script, ok := fieldValue.(string); ok {
+								dep.Script = script
+							}
+						case "steps":
+							if steps, ok := fieldValue.([]any); ok {
+								for _, step := range steps {
+									if stepStr, ok := step.(string); ok {
+										dep.Steps = append(dep.Steps, stepStr)
+									}
+								}
+							}
+						case "post_install_script":
+							if script, ok := fieldValue.(string); ok {
+								dep.PostInstallScript = script
+							}
+						case "post_install_steps":
+							if steps, ok := fieldValue.([]any); ok {
+								for _, step := range steps {
+									if stepStr, ok := step.(string); ok {
+										dep.PostInstallSteps = append(dep.PostInstallSteps, stepStr)
+									}
+								}
+							}
+						case "needs":
+							if needs, ok := fieldValue.([]any); ok {
+								for _, need := range needs {
+									if needStr, ok := need.(string); ok {
+										dep.Needs = append(dep.Needs, needStr)
+									}
+								}
+							}
+						}
+					}
+					dependencies[key] = dep
+				}
+			}
+		}
+	}
+
+	// Unmarshal authentication separately
+	var auth Auth
+	if authData := v.Get("authentication"); authData != nil {
+		if authMap, ok := authData.(map[string]any); ok {
+			for key, value := range authMap {
+				switch key {
+				case "username":
+					if username, ok := value.(string); ok {
+						auth.Username = username
+					}
+				case "email":
+					if email, ok := value.(string); ok {
+						auth.Email = email
+					}
+				case "ssh_file":
+					if sshFile, ok := value.(string); ok {
+						auth.SSHFile = sshFile
+					}
+				case "ssh_key_passphrase":
+					if passphrase, ok := value.(string); ok {
+						auth.SSHKeyPassphrase = passphrase
+					}
+				}
+			}
+		}
+	}
+
+	// Combine into final config
+	localConfig.Dependencies = dependencies
+	localConfig.Auth = auth
+
+	LOGGER.Info("Config after manual unmarshal:", localConfig)
+
+	// Update global config
+	config = localConfig
+
 	config.SetDependencyNames()
 }
 

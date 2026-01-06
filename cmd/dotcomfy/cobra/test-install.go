@@ -12,6 +12,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
 	"dotcomfy/internal/services"
 )
@@ -55,7 +56,8 @@ func test_install(cmd *cobra.Command, args []string) {
 		} else {
 			url = args[0]
 		}
-		_, err := services.DownloadConfigFile(args[0], "omarchy")
+		temp_config_path, err := services.DownloadConfigFile(url, "omarchy")
+		Config.SetTempConfig(temp_config_path)
 		err = services.Clone(url, "omarchy", COMMIT, "/tmp/.dotcomfy/")
 
 		if err != nil {
@@ -63,9 +65,10 @@ func test_install(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 	} else {
-		url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
-		url = "https://raw.githubusercontent.com/ethangamma24/dotfiles/refs/heads/omarchy/dotcomfy/config.yaml"
-		_, err := services.DownloadConfigFile(url, "omarchy")
+		url := fmt.Sprintf("https://github.com/%s/dotfiles", args[0])
+		// url = "https://raw.githubusercontent.com/ethangamma24/dotfiles/refs/heads/omarchy/dotcomfy/config.yaml"
+		temp_config_path, err := services.DownloadConfigFile(url, "omarchy")
+		Config.SetTempConfig(temp_config_path)
 		err = services.Clone(url, "omarchy", COMMIT, "/tmp/.dotcomfy/")
 		if err != nil {
 			LOGGER.Error(err)

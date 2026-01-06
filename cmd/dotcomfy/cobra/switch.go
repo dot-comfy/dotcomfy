@@ -63,8 +63,8 @@ var switchCmd = &cobra.Command{
 				LOGGER.Fatal("No URL found for the remote 'origin'")
 			}
 
-			_, err = services.DownloadConfigFile(repo_url, BRANCH)
-			Config.SetTempConfig()
+			temp_config_path, err := services.DownloadConfigFile(repo_url, BRANCH)
+			Config.SetTempConfig(temp_config_path)
 			err = switchDotfiles(dotcomfy_dir, old_dotfiles_dir, repo_url, BRANCH)
 			if err != nil {
 				LOGGER.Fatal(err)
@@ -80,8 +80,8 @@ var switchCmd = &cobra.Command{
 				repo_url = fmt.Sprintf("https://github.com/%s/dotfiles.git", REPO)
 			}
 			LOGGER.Error(err)
-			_, err := services.DownloadConfigFile(repo_url, BRANCH)
-			Config.SetTempConfig()
+			temp_config_path, err := services.DownloadConfigFile(repo_url, BRANCH)
+			Config.SetTempConfig(temp_config_path)
 			err = switchDotfiles(dotcomfy_dir, old_dotfiles_dir, repo_url, BRANCH)
 			if err != nil {
 				LOGGER.Fatal(err)
