@@ -20,6 +20,7 @@ import (
 )
 
 var skip_dependencies bool
+var preferredPMFlag string
 
 // installCmd represents the install command
 var installCmd = &cobra.Command{
@@ -43,6 +44,8 @@ func run(cmd *cobra.Command, args []string) {
 	// Default to XDG_CONFIG_HOME directory if not set
 	old_dotfiles_dir := user.HomeDir + "/.config"
 
+	var pm string
+
 	if len(args) > 1 {
 		fmt.Println("Too many arguments")
 		os.Exit(1)
@@ -63,6 +66,19 @@ func run(cmd *cobra.Command, args []string) {
 		}
 		temp_config_path, err := services.DownloadConfigFile(url, BRANCH)
 		Config.SetTempConfig(temp_config_path)
+
+		// Determine and validate preferred package manager before cloning
+		preferredPM := preferredPMFlag
+		if preferredPM == "" {
+			config := Config.GetConfig()
+			preferredPM = config.PackageManager
+		}
+		pm, err = services.ValidateAndGetPackageManager(preferredPM)
+		if err != nil {
+			LOGGER.Error(err)
+			os.Exit(1)
+		}
+
 		err = services.Clone(url, BRANCH, COMMIT, dotcomfy_dir)
 
 		if err != nil {
@@ -73,6 +89,19 @@ func run(cmd *cobra.Command, args []string) {
 		url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
 		temp_config_path, err := services.DownloadConfigFile(url, BRANCH)
 		Config.SetTempConfig(temp_config_path)
+
+		// Determine and validate preferred package manager before cloning
+		preferredPM := preferredPMFlag
+		if preferredPM == "" {
+			config := Config.GetConfig()
+			preferredPM = config.PackageManager
+		}
+		pm, err = services.ValidateAndGetPackageManager(preferredPM)
+		if err != nil {
+			LOGGER.Error(err)
+			os.Exit(1)
+		}
+
 		err = services.Clone(url, BRANCH, COMMIT, dotcomfy_dir)
 		if err != nil {
 			LOGGER.Error(err)
@@ -107,7 +136,7 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	if !skip_dependencies {
-		err = services.InstallDependenciesLinux()
+		err = services.InstallDependenciesLinux(pm)
 
 		if err != nil {
 			LOGGER.Error(err)
@@ -131,4 +160,5 @@ func init() {
 	installCmd.PersistentFlags().StringVarP(&BRANCH, "branch", "b", "main", "Branch to clone")
 	installCmd.PersistentFlags().StringVar(&COMMIT, "at-commit", "", "Specific commit hash to install")
 	installCmd.Flags().BoolVar(&skip_dependencies, "skip-dependencies", false, "Skip installing dependencies")
+	installCmd.Flags().StringVar(&preferredPMFlag, "package-manager", "", "Preferred package manager for dependency installation")
 }

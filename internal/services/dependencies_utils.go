@@ -1,11 +1,13 @@
 package services
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 
 	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
@@ -39,6 +41,92 @@ func CheckPackageManager() (string, error) {
 		return "zypper", nil
 	} else {
 		return "", errors.New("Unknown package manager")
+	}
+}
+
+func isValidPackageManager(pm string) bool {
+	validPMs := []string{"apt", "dnf", "yum", "yay", "pacman", "zypper", "brew"}
+	for _, v := range validPMs {
+		if pm == v {
+			return true
+		}
+	}
+	return false
+}
+
+func findAvailablePM() string {
+	exists := func(pm string) bool {
+		_, err := exec.LookPath(pm)
+		return err == nil
+	}
+
+	if exists("apt") {
+		return "apt"
+	} else if exists("dnf") {
+		return "dnf"
+	} else if exists("yum") {
+		return "yum"
+	} else if exists("yay") {
+		return "yay"
+	} else if exists("pacman") {
+		return "pacman"
+	} else if exists("zypper") {
+		return "zypper"
+	} else if exists("brew") {
+		return "brew"
+	} else {
+		return ""
+	}
+}
+
+func promptContinue(question string) bool {
+	fmt.Print(question)
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	answer := strings.ToLower(strings.TrimSpace(scanner.Text()))
+	return answer == "y" || answer == "yes"
+}
+
+func ValidateAndGetPackageManager(preferredPM string) (string, error) {
+	if preferredPM != "" {
+		if !isValidPackageManager(preferredPM) {
+			// invalid, find fallback
+			fallback := findAvailablePM()
+			if fallback == "" {
+				return "", errors.New("Preferred package manager '" + preferredPM + "' is invalid and no fallback found")
+			}
+			// prompt
+			if !promptContinue("The package manager '" + preferredPM + "' is not supported. Found '" + fallback + "' on your system. Continue with " + fallback + "? (y/N): ") {
+				return "", errors.New("User declined to continue with fallback package manager")
+			}
+			return fallback, nil
+		} else {
+			// valid, check if exists
+			exists := func(pm string) bool {
+				_, err := exec.LookPath(pm)
+				return err == nil
+			}
+			if exists(preferredPM) {
+				return preferredPM, nil
+			} else {
+				// not found, find fallback
+				fallback := findAvailablePM()
+				if fallback == "" {
+					return "", errors.New("Preferred package manager '" + preferredPM + "' not found and no fallback available")
+				}
+				if !promptContinue("Preferred package manager '" + preferredPM + "' not found. Found '" + fallback + "' on your system. Continue with " + fallback + "? (y/N): ") {
+					return "", errors.New("User declined to continue with fallback package manager")
+				}
+				return fallback, nil
+			}
+		}
+	} else {
+		// no preferred, find available
+		pm := findAvailablePM()
+		if pm == "" {
+			return "", errors.New("No package manager found")
+		}
+		return pm, nil
 	}
 }
 
@@ -193,6 +281,12 @@ func InstallPackage(pm string, pkg string, version string) error {
 			pkg = pkg + "=" + version
 		}
 		err := exec.Command("sudo", "zypper", "install", "-y", pkg).Run()
+		return err
+	case "brew":
+		if version != "" && version != "latest" {
+			pkg = pkg + "@" + version
+		}
+		err := exec.Command("brew", "install", pkg).Run()
 		return err
 	default:
 		return errors.New("Unknown package manager")

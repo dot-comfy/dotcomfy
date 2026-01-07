@@ -10,7 +10,7 @@ RUN dnf install -y sudo && usermod -aG wheel comfy
 
 RUN echo 'comfy ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-RUN dnf install -y which zsh
+RUN dnf install -y which zsh git
 
 # Switch to the non-root user
 USER comfy

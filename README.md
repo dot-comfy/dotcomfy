@@ -10,18 +10,18 @@ Whether you're SSHing into brand new cloud servers, bouncing between different o
 
 - One-command installation of config sets from Git repositories
 - Config switching between different setups/environments
-- Automated dependency management with custom installation scripts
+- Automated dependency management with custom installation scripts and package manager prioritization
 - Support for both public and private repositories with SSH authentication
 - Containerized testing across multiple Linux distributions (Arch, Fedora, Ubuntu)
 
 ### Note
-The dependency management feature is still in development and may not work as expected.
+The dependency management feature, including package manager prioritization, is still in development and may not work as expected.
 
 ## Prerequisites
 
 - Go 1.23.0+
 - Git
-- Package manager (pacman, yum, apt, etc.) - auto-detected
+- Package manager (pacman, yum, apt, brew, etc.) - auto-detected with user prioritization
 
 ## Installation
 
@@ -46,10 +46,11 @@ make install INSTALL_DIR=~/bin
 ## Usage
 
 ### Installation
-`dotcomfy install [REPO] --branch [BRANCH] --skip-dependencies`
+`dotcomfy install [REPO] --branch [BRANCH] --package-manager [PM] --skip-dependencies`
 - REPO: can be either a GitHub username or a repository URL.
   - If you're using a GitHub username, dotcomfy will attempt to clone the `dotfiles` repository under that user.
 - BRANCH: the branch of the repository to install. If not specified, the `main` branch will be used.
+- `--package-manager` or `-pm`: Specify preferred package manager for dependency installation (apt, dnf, yum, yay, pacman, zypper, brew). Falls back to auto-detection if not available.
 - `--skip-dependencies` skips the dependency installation step.
 
 ### Switch
@@ -71,7 +72,6 @@ make install INSTALL_DIR=~/bin
 - Stages all changes, commits them with an auto-generated message including username, hostname, and timestamp, then pushes to the remote origin branch.
 - Requires write permissions on the remote repository.
 - Uses SSH authentication from config.
-- Note: Currently pushes the current branch; future enhancement to specify branch.
 
 ### Global Flags
 - `--config`: Specify a custom config file path (default: `$HOME/.config/dotcomfy/config.toml`)
@@ -107,9 +107,18 @@ dependencies:
       - zsh
   tmux:
     version: "latest"
-  zsh:
-    post_install_steps:
-      - chsh -s $(which zsh)
+   zsh:
+     post_install_steps:
+       - chsh -s $(which zsh)
+ ```
+
+#### Package Manager
+Specify a preferred package manager for dependency installation. If not set or unavailable, dotcomfy will auto-detect from supported managers.
+- **preferred_package_manager**: One of: apt, dnf, yum, yay, pacman, zypper, brew
+
+Example:
+```yaml
+preferred_package_manager: pacman
 ```
 
 #### Authentication
