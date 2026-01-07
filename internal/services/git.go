@@ -3,18 +3,18 @@ package services
 import (
 	"fmt"
 	"os"
-	"strings"
-
+	"os/exec"
 	"os/user"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/go-git/go-git/v5"
 	GitConfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/utils/merkletrie"
-
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	"github.com/go-git/go-git/v5/utils/merkletrie"
 
 	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
@@ -22,42 +22,157 @@ import (
 
 func Clone(url, branch, commit_hash, path string) error {
 	LOGGER = Log.GetLogger()
-	// @REF [Basic go-git example](https://github.com/go-git/go-git/blob/master/_examples/clone/main.go)
-	repo, err := git.PlainClone(path, false, &git.CloneOptions{
-		URL:               url, // Guaranteed at least one because cobra
-		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
-		ReferenceName:     plumbing.ReferenceName(branch),
-		SingleBranch:      true,
-	})
+
+	// Default to clone with ssh
+	use_ssh := true
+
+	config := Config.GetConfig()
+	auth := config.Auth
+
+	// Debug: Log authentication configuration
+	ssh_file_path, _ := auth.GetSSHKeyPath()
+	LOGGER.Debugf("Authentication configuration loaded:")
+	LOGGER.Debugf("  Username: %s", auth.GetUsername())
+	LOGGER.Debugf("  Email: %s", auth.GetEmail())
+	LOGGER.Debugf("  SSH file: %s", ssh_file_path)
+	if auth.GetSSHKeyPassphrase() != "" {
+		LOGGER.Debugf("  SSH key passphrase: (provided)")
+	} else {
+		LOGGER.Debugf("  SSH key passphrase: (not provided)")
+	}
+
+	ssh_key_path, err := auth.GetSSHKeyPath()
 	if err != nil {
-		LOGGER.Error(err)
-		return err
+		LOGGER.Errorf("Error getting ssh key path: %v", err)
+		LOGGER.Errorf("SSH authentication will be disabled, falling back to HTTPS")
+		use_ssh = false
+	} else {
+		LOGGER.Debugf("Resolved SSH key path: %s", ssh_key_path)
 	}
 
+	// Validate SSH key file exists and is readable
+	if use_ssh && ssh_key_path != "" {
+		if _, err := os.Stat(ssh_key_path); os.IsNotExist(err) {
+			LOGGER.Errorf("SSH key file does not exist: %s", ssh_key_path)
+			LOGGER.Errorf("SSH authentication will be disabled, falling back to HTTPS")
+			use_ssh = false
+		} else if err != nil {
+			LOGGER.Errorf("Error accessing SSH key file %s: %v", ssh_key_path, err)
+			LOGGER.Errorf("SSH authentication will be disabled, falling back to HTTPS")
+			use_ssh = false
+		} else {
+			LOGGER.Debugf("SSH key file exists and is accessible: %s", ssh_key_path)
+
+			// Basic validation: check if key looks like PEM format
+			ssh_key, err := os.ReadFile(ssh_key_path)
+			if err != nil {
+				LOGGER.Errorf("Error reading the ssh key: %v", err)
+				use_ssh = false
+			} else {
+				keyContent := string(ssh_key)
+				if !strings.Contains(keyContent, "-----BEGIN") || !strings.Contains(keyContent, "-----END") {
+					LOGGER.Warn("SSH key may not be in PEM format (missing BEGIN/END markers)")
+					use_ssh = false
+				} else {
+					LOGGER.Debugf("SSH key validation passed, size: %d bytes", len(ssh_key))
+				}
+			}
+		}
+	}
+
+	// NOTE: This uses a raw Git command to clone the repo with SSH instead of
+	//		 `git-go` because that module has quirks with using SSH keys for
+	//		 auth.
+
+	// Prepare git clone command arguments
+	var cloneArgs []string
+	cloneArgs = append(cloneArgs, "clone")
+
+	// Add branch option if specified
+	if branch != "" && branch != "main" && branch != "master" {
+		cloneArgs = append(cloneArgs, "--branch", branch)
+		cloneArgs = append(cloneArgs, "--single-branch")
+	}
+
+	// Add URL and path
+	cloneArgs = append(cloneArgs, url, path)
+
+	// Prepare environment for git command
+	env := os.Environ()
+	clone_url := url
+
+	if use_ssh && ssh_key_path != "" {
+		// Configure SSH command for git
+		sshCmd := fmt.Sprintf("ssh -i %s -o IdentitiesOnly=yes -o StrictHostKeyChecking=no", ssh_key_path)
+		if auth.GetSSHKeyPassphrase() != "" {
+			// For keys with passphrases, we'd need ssh-agent or expect script
+			// For now, assume passphrase-less keys or keys loaded in ssh-agent
+			LOGGER.Warn("SSH keys with passphrases are not fully supported in this implementation")
+			LOGGER.Warn("Consider using ssh-agent or converting to passphrase-less keys")
+		}
+		env = append(env, fmt.Sprintf("GIT_SSH_COMMAND=%s", sshCmd))
+
+		// Convert HTTPS URL to SSH format for SSH cloning
+		if strings.HasPrefix(url, "https://github.com/") {
+			// https://github.com/user/repo.git -> git@github.com:user/repo.git
+			ssh_url := strings.Replace(url, "https://github.com/", "git@github.com:", 1)
+			ssh_url = strings.Replace(ssh_url, ".git", ".git", 1) // keep .git suffix
+			clone_url = ssh_url
+			LOGGER.Infof("Converted HTTPS URL to SSH: %s", clone_url)
+		} else if strings.HasPrefix(url, "https://gitlab.com/") {
+			// https://gitlab.com/user/repo.git -> git@gitlab.com:user/repo.git
+			ssh_url := strings.Replace(url, "https://gitlab.com/", "git@gitlab.com:", 1)
+			clone_url = ssh_url
+			LOGGER.Infof("Converted HTTPS URL to SSH: %s", clone_url)
+		} else {
+			LOGGER.Warn("SSH authentication configured but URL format not recognized for conversion")
+		}
+		LOGGER.Infof("Using SSH authentication with key: %s", ssh_key_path)
+	} else {
+		LOGGER.Info("Cloning with HTTPS (SSH not available)")
+	}
+
+	// Update the URL in clone args
+	cloneArgs[len(cloneArgs)-2] = clone_url
+
+	// Execute git clone command
+	LOGGER.Infof("Executing: git %s", strings.Join(cloneArgs, " "))
+	cmd := exec.Command("git", cloneArgs...)
+	cmd.Env = env
+	cmd.Dir = path
+
+	// Get parent directory for command execution
+	parentDir := filepath.Dir(path)
+	if parentDir != "." {
+		cmd.Dir = parentDir
+	}
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		LOGGER.Errorf("Git clone failed: %v", err)
+		LOGGER.Errorf("Git output: %s", string(output))
+		return fmt.Errorf("git clone failed: %v", err)
+	}
+
+	LOGGER.Infof("Git clone successful")
+	LOGGER.Debugf("Git output: %s", string(output))
+
+	// Handle commit hash checkout if specified
 	if commit_hash != "" {
-		worktree, err := repo.Worktree()
-		if err != nil {
-			LOGGER.Error(err)
-			return err
+		LOGGER.Infof("Checking out commit: %s", commit_hash)
+
+		checkoutArgs := []string{"-C", path, "checkout", commit_hash}
+		checkoutCmd := exec.Command("git", checkoutArgs...)
+		checkoutOutput, checkoutErr := checkoutCmd.CombinedOutput()
+
+		if checkoutErr != nil {
+			LOGGER.Errorf("Git checkout failed: %v", checkoutErr)
+			LOGGER.Errorf("Git checkout output: %s", string(checkoutOutput))
+			return fmt.Errorf("git checkout failed: %v", checkoutErr)
 		}
 
-		err = worktree.Checkout(&git.CheckoutOptions{
-			Hash:  plumbing.NewHash(commit_hash),
-			Force: true,
-		})
-		if err != nil {
-			LOGGER.Error(err)
-			return err
-		}
+		LOGGER.Infof("Git checkout successful")
 	}
-
-	// head, err := repo.Head()
-	// if err != nil {
-	// 	LOGGER.Error(err)
-	// 	return err
-	// }
-
-	// fmt.Println(head.Hash())
 
 	return nil
 }
@@ -232,74 +347,48 @@ func Push(repo_path string) error {
 	config := Config.GetConfig()
 	auth := config.Auth
 
-	repo, err := git.PlainOpen(repo_path)
+	ssh_key_path, err := auth.GetSSHKeyPath()
 	if err != nil {
-		LOGGER.Errorf("Error opening the local repo in %s: %v", repo_path, err)
+		LOGGER.Errorf("Error getting ssh key path: %v", err)
 		return err
 	}
+	LOGGER.Debugf("Push resolved SSH key path: %s", ssh_key_path)
 
-	head, err := repo.Head()
-	if err != nil {
-		LOGGER.Errorf("Error getting HEAD: %v", err)
-		return err
+	// Validate SSH key file exists before attempting to read
+	if _, err := os.Stat(ssh_key_path); os.IsNotExist(err) {
+		LOGGER.Errorf("SSH key file does not exist: %s", ssh_key_path)
+		return fmt.Errorf("SSH key file not found: %s", ssh_key_path)
+	} else if err != nil {
+		LOGGER.Errorf("Error accessing SSH key file %s: %v", ssh_key_path, err)
+		return fmt.Errorf("cannot access SSH key file: %v", err)
 	}
 
-	// Get branch name
-	branch_name := string(head.Name())
-	if strings.HasPrefix(branch_name, "refs/heads/") {
-		branch_name = strings.TrimPrefix(branch_name, "refs/heads/")
-	}
-
-	// Fetch to see if there are any changes to the remote branch
-	err = repo.Fetch(&git.FetchOptions{
-		RemoteName: "origin",
-		Force:      true,
-		RefSpecs: []GitConfig.RefSpec{
-			GitConfig.RefSpec("+refs/heads/" + branch_name + ":refs/remotes/origin/" + branch_name),
-		},
-	})
-	if err != nil && err != git.NoErrAlreadyUpToDate {
-		LOGGER.Errorf("Error fetching: %v", err)
-		return err
-		// } else if err == git.NoErrAlreadyUpToDate {
-		// 	LOGGER.Infof("Nothing to change")
-		// 	fmt.Print("Nothing to change")
-		// 	os.Exit(0)
-	}
-
-	remote_ref_name := plumbing.NewRemoteReferenceName("origin", branch_name)
-	origin_ref, err := repo.Reference(remote_ref_name, true)
-	if err != nil {
-		LOGGER.Errorf("Error getting origin reference: %v", err)
-		return err
-	}
-
-	local_ref_name := plumbing.NewBranchReferenceName(branch_name)
-	local_ref, err := repo.Reference(local_ref_name, true)
-	if err != nil {
-		LOGGER.Errorf("Error getting local reference: %v", err)
-		return err
-	}
-
-	// Error out if remote branch is ahead of local
-	if local_ref.Hash() != origin_ref.Hash() {
-		fmt.Printf("Remote branch is ahead of local branch. You may want to handle pulling in the latest changes using git, as running 'dotcomfy pull' will overwrite all of your local changes.")
-		LOGGER.Fatalf("Remote branch is ahead of local branch. You may want to handle pulling in the latest changes using git, as running 'dotcomfy pull' will overwrite all of your local changes.")
-	}
-
-	// Get SSH key
-	fmt.Println(auth.SSHKeyPath)
-	fmt.Println(config)
-	ssh_key, err := os.ReadFile(auth.GetSSHKeyPath())
+	ssh_key, err := os.ReadFile(ssh_key_path)
 	if err != nil {
 		LOGGER.Errorf("Error reading the ssh key: %v", err)
 		return err
+	}
+	LOGGER.Debugf("SSH key read successfully for push, size: %d bytes", len(ssh_key))
+
+	// Basic validation: check if key looks like PEM format
+	keyContent := string(ssh_key)
+	if !strings.Contains(keyContent, "-----BEGIN") || !strings.Contains(keyContent, "-----END") {
+		LOGGER.Warn("SSH key may not be in PEM format (missing BEGIN/END markers)")
+	}
+
+	passphrase := auth.GetSSHKeyPassphrase()
+	if passphrase != "" {
+		LOGGER.Debugf("SSH key is encrypted (passphrase provided)")
+	} else {
+		LOGGER.Debugf("SSH key is not encrypted (no passphrase)")
 	}
 
 	ssh_auth, err := ssh.NewPublicKeys("git", ssh_key, auth.GetSSHKeyPassphrase())
 	if err != nil {
 		LOGGER.Errorf("Error creating the SSH authenticatior: %v", err)
+		return err
 	}
+	LOGGER.Infof("SSH authentication method created successfully for push")
 
 	// Grab URL to be pushed to? Do I need this?
 	/*
