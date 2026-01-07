@@ -4,7 +4,7 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 package cobra
 
 import (
-	"fmt"
+	"os"
 	"os/user"
 
 	"github.com/spf13/cobra"
@@ -20,8 +20,7 @@ var pullCmd = &cobra.Command{
 	Long: `This command will pull the latest changes from the remote repository
 and update your dotcomfy installation accordingly.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("pull called")
-		LOGGER = Log.GetLogger()
+		LOGGER := Log.GetLogger()
 		user, err := user.Current()
 		if err != nil {
 			LOGGER.Fatal(err)
@@ -31,6 +30,7 @@ and update your dotcomfy installation accordingly.`,
 		err = services.Pull(dotcomfy_dir)
 		if err != nil {
 			LOGGER.Error(err)
+			os.Exit(1)
 		}
 	},
 }

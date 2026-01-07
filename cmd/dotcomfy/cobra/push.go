@@ -4,7 +4,6 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 package cobra
 
 import (
-	"fmt"
 	"os"
 	"os/user"
 
@@ -21,9 +20,7 @@ var pushCmd = &cobra.Command{
 	Long: `Pushes your local changes to the remote repository on the current
 branch. Note that you must have write permissions for this to succeed.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("push called")
-
-		LOGGER = Log.GetLogger()
+		LOGGER := Log.GetLogger()
 		user, err := user.Current()
 		if err != nil {
 			LOGGER.Fatal(err)
@@ -31,6 +28,7 @@ branch. Note that you must have write permissions for this to succeed.`,
 		dotcomfy_dir := user.HomeDir + "/.dotcomfy"
 		err = services.Push(dotcomfy_dir)
 		if err != nil {
+			LOGGER.Error(err)
 			os.Exit(1)
 		}
 	},

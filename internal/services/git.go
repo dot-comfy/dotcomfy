@@ -4,24 +4,16 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/go-git/go-git/v5"
-	GitConfig "github.com/go-git/go-git/v5/config"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
-	"github.com/go-git/go-git/v5/utils/merkletrie"
 
 	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
 )
 
 func Clone(url, branch, commit_hash, path string) error {
-	LOGGER = Log.GetLogger()
+	LOGGER := Log.GetLogger()
 
 	// Default to clone with ssh
 	use_ssh := true
@@ -79,10 +71,6 @@ func Clone(url, branch, commit_hash, path string) error {
 			}
 		}
 	}
-
-	// NOTE: This uses a raw Git command to clone the repo with SSH instead of
-	//		 `git-go` because that module has quirks with using SSH keys for
-	//		 auth.
 
 	// Prepare git clone command arguments
 	var cloneArgs []string
@@ -178,309 +166,158 @@ func Clone(url, branch, commit_hash, path string) error {
 }
 
 func Pull(repo_path string) error {
-	LOGGER = Log.GetLogger()
-	user, err := user.Current()
-	if err != nil {
-		os.Exit(1)
-	}
-
-	dotcomfy_dir := user.HomeDir + "/.dotcomfy"
-	old_dotfiles_dir := user.HomeDir + "/.config"
-
-	repo, err := git.PlainOpen(repo_path)
-	if err != nil {
-		LOGGER.Errorf("Error opening the local repo in %s: %v", repo_path, err)
-		return err
-	}
-
-	head, err := repo.Head()
-	if err != nil {
-		LOGGER.Errorf("Error getting HEAD: %v", err)
-		return err
-	}
-
-	branch_name := string(head.Name())
-	if strings.HasPrefix(branch_name, "refs/heads/") {
-		branch_name = strings.TrimPrefix(branch_name, "refs/heads/")
-	}
-
-	err = repo.Fetch(&git.FetchOptions{
-		RemoteName: "origin",
-		Force:      true,
-		RefSpecs: []GitConfig.RefSpec{
-			GitConfig.RefSpec("+refs/heads/" + branch_name + ":refs/remotes/origin/" + branch_name),
-		},
-	})
-	if err != nil && err != git.NoErrAlreadyUpToDate {
-		LOGGER.Errorf("Error fetching: %v", err)
-		return err
-	}
-
-	remote_ref_name := plumbing.NewRemoteReferenceName("origin", branch_name)
-	origin_ref, err := repo.Reference(remote_ref_name, true)
-	if err != nil {
-		LOGGER.Errorf("Error getting origin reference: %v", err)
-		return err
-	}
-
-	remote_commit, err := repo.CommitObject(origin_ref.Hash())
-	if err != nil {
-		LOGGER.Errorf("Error getting origin commit hash: %v", err)
-		return err
-	}
-
-	remote_tree, err := remote_commit.Tree()
-	if err != nil {
-		LOGGER.Errorf("Error getting origin commit tree: %v", err)
-		return err
-	}
-
-	local_ref_name := plumbing.NewBranchReferenceName(branch_name)
-	local_ref, err := repo.Reference(local_ref_name, true)
-	if err != nil {
-		LOGGER.Errorf("Error getting local reference: %v", err)
-		return err
-	}
-
-	local_commit, err := repo.CommitObject(local_ref.Hash())
-	if err != nil {
-		LOGGER.Errorf("Error getting local commit hash: %v", err)
-		return err
-	}
-
-	local_tree, err := local_commit.Tree()
-	if err != nil {
-		LOGGER.Errorf("Error getting origin commit tree: %v", err)
-		return err
-	}
-
-	changes, err := object.DiffTree(local_tree, remote_tree)
-	if err != nil {
-		LOGGER.Errorf("Error getting changes: %v", err)
-		return err
-	}
-
-	LOGGER.Infof("Origin ref after fetch: %s", origin_ref.Hash())
-
-	branch := plumbing.NewBranchReferenceName(branch_name)
-	// Bypass dirty worktree checks and just "fast forward" to the latest commit
-	err = repo.Storer.SetReference(plumbing.NewHashReference(branch, origin_ref.Hash()))
-	if err != nil {
-		LOGGER.Errorf("Error switching local reference to latest from origin: %v", err)
-		return err
-	}
-
-	worktree, err := repo.Worktree()
-	if err != nil {
-		LOGGER.Errorf("Error getting the worktree: %v", err)
-		return err
-	}
-
-	err = worktree.Checkout(&git.CheckoutOptions{
-		Branch: branch,
-		Force:  true,
-	})
-	if err != nil {
-		LOGGER.Errorf("Error checking out branch: %v", err)
-		return err
-	}
-
-	err = worktree.Pull(&git.PullOptions{
-		RemoteName:    "origin",
-		ReferenceName: branch,
-		SingleBranch:  true,
-		Force:         true,
-		Progress:      os.Stdout, // May omit this, we'll see how it looks
-	})
-	if err != nil && err != git.NoErrAlreadyUpToDate {
-		LOGGER.Errorf("Error pulling: %v", err)
-		return err
-	}
-
-	head, err = repo.Head()
-	if err != nil {
-		LOGGER.Errorf("Error getting HEAD: %v", err)
-		return err
-	}
-
-	LOGGER.Infof("HEAD is now at %s\n", head.Hash())
-	LOGGER.Infof("Changes from local to remote HEAD:")
-
-	for _, change := range changes {
-		action, err := change.Action()
-		if err != nil {
-			return err
-		}
-
-		patch, err := change.Patch()
-		if err != nil {
-			return err
-		}
-
-		patch_string := patch.String()
-
-		lines := strings.Split(patch_string, "\n")
-		if len(lines) == 0 {
-			continue
-		}
-
-		file_path := strings.TrimPrefix(lines[0], "diff --git a/")
-		file_path = "/" + strings.Split(file_path, " ")[0]
-
-		if action == merkletrie.Insert {
-			file_path, err = RenameSymlinkUnix(old_dotfiles_dir, dotcomfy_dir, file_path)
-		}
-	}
-
-	return nil
-}
-
-/*************************************
- * TODO: *
- *************************************/
-func Push(repo_path string) error {
-	LOGGER = Log.GetLogger()
-	// var repo_url string
-	var branch string
-	// var failed_files []string
+	LOGGER := Log.GetLogger()
 
 	config := Config.GetConfig()
 	auth := config.Auth
 
+	// Get SSH key path for authentication
 	ssh_key_path, err := auth.GetSSHKeyPath()
 	if err != nil {
 		LOGGER.Errorf("Error getting ssh key path: %v", err)
 		return err
 	}
-	LOGGER.Debugf("Push resolved SSH key path: %s", ssh_key_path)
 
-	// Validate SSH key file exists before attempting to read
-	if _, err := os.Stat(ssh_key_path); os.IsNotExist(err) {
-		LOGGER.Errorf("SSH key file does not exist: %s", ssh_key_path)
-		return fmt.Errorf("SSH key file not found: %s", ssh_key_path)
-	} else if err != nil {
-		LOGGER.Errorf("Error accessing SSH key file %s: %v", ssh_key_path, err)
-		return fmt.Errorf("cannot access SSH key file: %v", err)
-	}
-
-	ssh_key, err := os.ReadFile(ssh_key_path)
-	if err != nil {
-		LOGGER.Errorf("Error reading the ssh key: %v", err)
-		return err
-	}
-	LOGGER.Debugf("SSH key read successfully for push, size: %d bytes", len(ssh_key))
-
-	// Basic validation: check if key looks like PEM format
-	keyContent := string(ssh_key)
-	if !strings.Contains(keyContent, "-----BEGIN") || !strings.Contains(keyContent, "-----END") {
-		LOGGER.Warn("SSH key may not be in PEM format (missing BEGIN/END markers)")
-	}
-
-	passphrase := auth.GetSSHKeyPassphrase()
-	if passphrase != "" {
-		LOGGER.Debugf("SSH key is encrypted (passphrase provided)")
-	} else {
-		LOGGER.Debugf("SSH key is not encrypted (no passphrase)")
-	}
-
-	ssh_auth, err := ssh.NewPublicKeys("git", ssh_key, auth.GetSSHKeyPassphrase())
-	if err != nil {
-		LOGGER.Errorf("Error creating the SSH authenticatior: %v", err)
-		return err
-	}
-	LOGGER.Infof("SSH authentication method created successfully for push")
-
-	// Grab URL to be pushed to? Do I need this?
-	/*
-		urls := remote.Config().URLs
-		if len(urls) > 0 {
-			repo_url = urls[0]
-		} else {
-			LOGGER.Fatal("No URL found for the remote 'origin'")
+	// Validate SSH key file exists
+	if ssh_key_path != "" {
+		if _, err := os.Stat(ssh_key_path); os.IsNotExist(err) {
+			LOGGER.Errorf("SSH key file does not exist: %s", ssh_key_path)
+			return fmt.Errorf("SSH key file not found: %s", ssh_key_path)
 		}
-	*/
+	}
 
-	worktree, err := repo.Worktree()
+	// Prepare environment for git command with SSH authentication
+	env := os.Environ()
+	if ssh_key_path != "" {
+		sshCmd := fmt.Sprintf("ssh -i %s -o IdentitiesOnly=yes -o StrictHostKeyChecking=no", ssh_key_path)
+		env = append(env, fmt.Sprintf("GIT_SSH_COMMAND=%s", sshCmd))
+		LOGGER.Infof("Using SSH authentication with key: %s", ssh_key_path)
+	}
+
+	// Execute git pull command
+	LOGGER.Infof("Executing: git pull --ff-only")
+	cmd := exec.Command("git", "pull", "--ff-only")
+	cmd.Dir = repo_path
+	cmd.Env = env
+
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		LOGGER.Errorf("Error getting the worktree: %v", err)
+		LOGGER.Errorf("Git pull failed: %v", err)
+		LOGGER.Errorf("Git output: %s", string(output))
+		return fmt.Errorf("git pull failed: %v", err)
+	}
+
+	LOGGER.Infof("Git pull successful")
+	LOGGER.Debugf("Git output: %s", string(output))
+
+	return nil
+}
+
+func Push(repo_path string) error {
+	LOGGER := Log.GetLogger()
+
+	config := Config.GetConfig()
+	auth := config.Auth
+
+	// Get SSH key path for authentication
+	ssh_key_path, err := auth.GetSSHKeyPath()
+	if err != nil {
+		LOGGER.Errorf("Error getting ssh key path: %v", err)
 		return err
 	}
 
-	// Simple error-tolerant approach
-	status, err := worktree.Status()
-	if err != nil {
-		LOGGER.Errorf("Error getting status: %v", err)
-		return err
-	}
-
-	hasChanges := false
-	for file := range status {
-		_, err = worktree.Add(file)
-		if err != nil {
-			// Log warning but continue - empty directories can't be added anyway
-			LOGGER.Warnf("Could not add %s (likely empty directory): %v", file, err)
-			continue
+	// Validate SSH key file exists
+	if ssh_key_path != "" {
+		if _, err := os.Stat(ssh_key_path); os.IsNotExist(err) {
+			LOGGER.Errorf("SSH key file does not exist: %s", ssh_key_path)
+			return fmt.Errorf("SSH key file not found: %s", ssh_key_path)
 		}
-		hasChanges = true
 	}
 
-	if !hasChanges {
+	// Prepare environment for git command with SSH authentication
+	env := os.Environ()
+	if ssh_key_path != "" {
+		sshCmd := fmt.Sprintf("ssh -i %s -o IdentitiesOnly=yes -o StrictHostKeyChecking=no", ssh_key_path)
+		env = append(env, fmt.Sprintf("GIT_SSH_COMMAND=%s", sshCmd))
+		LOGGER.Infof("Using SSH authentication with key: %s", ssh_key_path)
+	}
+
+	// Execute git add to stage all changes
+	LOGGER.Infof("Executing: git add -A")
+	addCmd := exec.Command("git", "add", "-A")
+	addCmd.Dir = repo_path
+	addCmd.Env = env
+
+	addOutput, addErr := addCmd.CombinedOutput()
+	if addErr != nil {
+		LOGGER.Errorf("Git add failed: %v", addErr)
+		LOGGER.Errorf("Git add output: %s", string(addOutput))
+		return fmt.Errorf("git add failed: %v", addErr)
+	}
+
+	// Check if there are changes to commit
+	LOGGER.Infof("Executing: git status --porcelain")
+	statusCmd := exec.Command("git", "status", "--porcelain")
+	statusCmd.Dir = repo_path
+	statusCmd.Env = env
+
+	statusOutput, statusErr := statusCmd.CombinedOutput()
+	if statusErr != nil {
+		LOGGER.Errorf("Git status failed: %v", statusErr)
+		LOGGER.Errorf("Git status output: %s", string(statusOutput))
+		return fmt.Errorf("git status failed: %v", statusErr)
+	}
+
+	if len(statusOutput) == 0 {
 		fmt.Println("No changes to commit")
 		return nil
 	}
 
+	// Create commit message
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "unknown"
 	}
 
 	username := auth.GetUsername()
-	if err != nil {
+	if username == "" {
 		username = "unknown"
 	}
 
 	commit_message := fmt.Sprintf("Update from %s@%s at %s",
 		username,
 		hostname,
-		time.Now().Format("12:30:00 CST 1963-11-22"),
+		time.Now().Format("2006-01-02 15:04:05 MST"),
 	)
 
-	_, err = worktree.Commit(commit_message, &git.CommitOptions{
-		Author: &object.Signature{
-			Name:  username,
-			Email: auth.GetEmail(),
-			When:  time.Now(),
-		},
-	})
-	if err != nil {
-		LOGGER.Fatalf("Error committing: %v", err)
+	// Execute git commit
+	LOGGER.Infof("Executing: git commit -m '%s'", commit_message)
+	commitCmd := exec.Command("git", "commit", "-m", commit_message)
+	commitCmd.Dir = repo_path
+	commitCmd.Env = env
+
+	commitOutput, commitErr := commitCmd.CombinedOutput()
+	if commitErr != nil {
+		LOGGER.Errorf("Git commit failed: %v", commitErr)
+		LOGGER.Errorf("Git commit output: %s", string(commitOutput))
+		return fmt.Errorf("git commit failed: %v", commitErr)
 	}
 
-	remote, err := repo.Remote("origin")
-	if err != nil {
-		LOGGER.Error("Error getting remote from the origin:", err)
-		return err
+	// Execute git push
+	LOGGER.Infof("Executing: git push origin HEAD")
+	pushCmd := exec.Command("git", "push", "origin", "HEAD")
+	pushCmd.Dir = repo_path
+	pushCmd.Env = env
+
+	pushOutput, pushErr := pushCmd.CombinedOutput()
+	if pushErr != nil {
+		LOGGER.Errorf("Git push failed: %v", pushErr)
+		LOGGER.Errorf("Git push output: %s", string(pushOutput))
+		return fmt.Errorf("git push failed: %v", pushErr)
 	}
 
-	// TODO:
-	// Set up auth for private repos and/or username/password auth at runtime
-	// var auth *http.BasicAuth
-	// if auth != nil {
-
-	// }
-
-	err = remote.Push(&git.PushOptions{
-		Auth:       ssh_auth,
-		RemoteName: "origin",
-		Progress:   os.Stdout,
-		Force:      false,
-		RefSpecs: []GitConfig.RefSpec{
-			GitConfig.RefSpec("+refs/heads/" + branch_name + ":refs/remotes/origin/" + branch),
-		},
-	})
-	if err != nil {
-		LOGGER.Fatalf("Error pushing: %v", err)
-	}
+	LOGGER.Infof("Git push successful")
+	LOGGER.Debugf("Git push output: %s", string(pushOutput))
 
 	return nil
 }
