@@ -2,28 +2,32 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/dot-comfy/dotcomfy)](https://goreportcard.com/report/github.com/dot-comfy/dotcomfy)
 
-**dotcomfy** is a CLI tool designed to simplify the management of configuration files for developer tools like Neovim, Tmux, Alacritty, and more. With dotcomfy, you can install, switch, and manage your config files with ease, automating the setup of package dependencies along the way.
+**dotcomfy** is a CLI tool written in Go that simplifies the management of configuration files (dotfiles) for developer tools like Neovim, Tmux, Alacritty, and more. With dotcomfy, you can install, switch, and manage your config files with ease, automating the setup of package dependencies along the way.
+
+Whether you're SSHing into brand new cloud servers, bouncing between different operating systems, or just wanting to try out different Linux rices, dotcomfy has you covered!
 
 ## Features
 
-- One-command installation of config sets for various developer tools.
-- Config switching between different setups or environments.
-- Automated dependency management for packages required by your configs.
-- Customizable installation scripts for tools without standard package management.
+- One-command installation of config sets from Git repositories
+- Config switching between different setups/environments
+- Automated dependency management with custom installation scripts
+- Support for both public and private repositories with SSH authentication
+- Containerized testing across multiple Linux distributions (Arch, Fedora, Ubuntu)
 
 ### Note
 The dependency management feature is still in development and may not work as expected.
+
+## Prerequisites
+
+- Go 1.23.0+
+- Git
+- Package manager (pacman, yum, apt, etc.) - auto-detected
 
 ## Installation
 
 ### WARNING
 
 **Please make sure you back up your `.config` directory before using dotcomfy. It is currently a WIP, and stability is not guaranteed.**
-
-### Prerequisites
-
-- Go
-- Git
 
 ### Building from Source
 
@@ -34,8 +38,7 @@ make build
 make install
 ```
 
-This will build the binary and install it to `/usr/local/bin/`.
-If you want to specify a different directory for installation, you can specify it in the `make install` command:
+This will build the binary and install it to `/usr/local/bin/`. If you want to specify a different directory for installation, you can specify it in the `make install` command:
 ```bash
 make install INSTALL_DIR=~/bin
 ```
@@ -61,61 +64,118 @@ make install INSTALL_DIR=~/bin
 
 ### Pull
 `dotcomfy pull`
-- Pull gets the latest changes from the current branch of the dotcomfy installation. Please note that any files locally changed that conflict with changes being pulled in **will automatically be overwritten**.
+- Pulls the latest changes from the current branch of the dotcomfy installation. Please note that any files locally changed that conflict with changes being pulled in **will automatically be overwritten**.
 
 ### Push
 `dotcomfy push`
-- _In progress_
+- Stages all changes, commits them with an auto-generated message including username, hostname, and timestamp, then pushes to the remote origin branch.
+- Requires write permissions on the remote repository.
+- Uses SSH authentication from config.
+- Note: Currently pushes the current branch; future enhancement to specify branch.
+
+### Global Flags
+- `--config`: Specify a custom config file path (default: `$HOME/.config/dotcomfy/config.toml`)
+- `-v`: Increase logging verbosity (can be used multiple times, e.g.: `-vvvv`)
 
 ## Configuration
 
-dotcomfy's config file lives at `$HOME/.config/dotcomfy/config.yaml`.
+dotcomfy's config file supports YAML. It lives at `$HOME/.config/dotcomfy/config.yaml`.
 
 ### Dependencies
+Define packages or tools required for your dotfiles. Each dependency supports:
+- **version**: Package manager installation with specific version (e.g., "0.57.0", "latest")
+- **script**: Path to custom shell script for installation (relative to config file)
+- **steps**: Array of shell commands for installation
+- **needs**: Array of other dependencies that must be installed first
+- **post_install_steps**: Array of commands to run after package installation (requires version)
+- **post_install_script**: Path to script to run after installation (requires version)
 
-You can specify packages that need to be installed in order for the config set to function properly:
-```yaml filename="config.yaml"
+**Validation rules:**
+- Must specify at least `version`, `script`, or `steps`
+- Only one of `version`, `steps` or `script` can be specified
+- Cannot mix `post_install_steps` with `post_install_script`
+- No self-dependencies or cycles
+
+Example:
+```yaml
 dependencies:
-# Version can be specified for a package being installed from a package manager
   fzf:
-    version: 0.57.0
-  # Custom shell scripts for dependency installation can be specified.
-  # The `needs` field can be used to specify dependencies that need to be installed before this dependency.
+    version: "0.57.0"
   nvim:
-    script: nvim.sh
-    needs:
-      - zsh
-  # Custom installations can be specified step by step
-  nvm:
-    steps:
-      - curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+    script: "nvim.sh"
     needs:
       - zsh
   tmux:
-    version: latest
-  # Commands needed after package installation can also be specified
+    version: "latest"
   zsh:
     post_install_steps:
       - chsh -s $(which zsh)
 ```
 
-#### Custom Installation Scripts
+#### Authentication
+Required for pushing to private repositories or SSH-based operations.
+- **username**: Your Git username
+- **email**: Your Git email
+- **ssh_file**: Path to SSH private key
+- **ssh_key_passphrase**: Passphrase for SSH key (optional)
 
-Scripts should start with `#!/bin/sh` and should be located in the same directory as the config file.
-```sh filename="nvim.sh"
-#!/bin/sh
-
-curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
-sudo rm -rf /opt/nvim
-sudo tar -C /opt -xzf nvim-linux-x86_64.tar.gz
-if [ -n "$ZSH_VERSION" ]; then
-    echo 'export PATH="$PATH:/opt/nvim-linux-x86_64/bin"' >> "$HOME/.zshrc"
-    echo 'Adding path to .zshrc'
-elif [ -n "$BASH_VERSION" ]; then
-    echo 'export PATH="$PATH:/opt/nvim-linux-x86_64/bin"' >> "$HOME/.bashrc"
-    echo 'Adding path to .bashrc'
-else
-    echo 'No idea what shell is on this system'
-fi
-export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
+Example:
+```yaml
+authentication:
+  username: "your_username"
+  email: "your_email@example.com"
+  ssh_file: "~/.ssh/id_rsa"
+  ssh_key_passphrase: "optional_passphrase"
 ```
+
+## Development
+
+### Project Structure
+```
+dotcomfy/
+├── main.go                   # Entry point with sudo protection
+├── go.mod/go.sum             # Go module dependencies
+├── Makefile                  # Build, test, and installation targets
+├── README.md                 # User documentation
+├── bin/                      # Built binary output
+├── cmd/dotcomfy/cobra/       # CLI command implementations
+├── internal/
+│   ├── config/               # Configuration structures and validation
+│   ├── services/             # Business logic (Git ops, dependencies, etc.)
+│   └── logger/               # Logging configuration
+├── tests/scripts/            # Test scripts for container testing
+├── docs/                     # Documentation and references
+└── Containerfile*            # Container definitions for different distros
+```
+
+### Building
+```bash
+make build          # Build binary to bin/dotcomfy
+make install        # Install to /usr/local/bin (or custom path)
+make references     # Build docs/REFERENCES.md
+```
+
+### Testing
+```bash
+make test-<script>  # Run specific test in container (e.g., make test-install)
+make test          # Run all tests
+make container     # Interactive container for testing
+```
+
+Containerized tests support multiple Linux distributions with Podman/Docker.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues and pull requests.
+
+## License
+
+The MIT License (MIT)
+
+Copyright © 2025 Ethan Harmon, Stephen Reaves
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
