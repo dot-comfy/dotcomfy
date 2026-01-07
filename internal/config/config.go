@@ -13,8 +13,9 @@ import (
 )
 
 type Config struct {
-	Dependencies map[string]Dependency `yaml:"dependencies,omitempty"`
-	Auth         Auth                  `yaml:"authentication,omitempty"`
+	Dependencies   map[string]Dependency `yaml:"dependencies,omitempty"`
+	Auth           Auth                  `yaml:"authentication,omitempty"`
+	PackageManager string                `yaml:"package_manager,omitempty"`
 }
 
 // TODO: Find a way to pull config file down first from the repo if it exists to validate before installation
@@ -73,6 +74,9 @@ func (c *Config) Validate() []error {
 				}
 			}
 		}
+	}
+	if c.PackageManager != "" && !isValidPackageManager(c.PackageManager) {
+		errs = append(errs, errors.New("Invalid preferred_package_manager: "+c.PackageManager+". Must be one of: apt, dnf, yum, yay, pacman, zypper, brew"))
 	}
 	return errs
 }
@@ -223,6 +227,16 @@ func (d *Dependency) GetFailedInstall() bool {
 	return d.FailedInstall
 }
 
+func isValidPackageManager(pm string) bool {
+	validPMs := []string{"apt", "brew", "dnf", "yum", "yay", "pacman", "zypper"}
+	for _, v := range validPMs {
+		if pm == v {
+			return true
+		}
+	}
+	return false
+}
+
 var config *Config
 
 func SetConfig() {
@@ -325,6 +339,14 @@ func SetConfig() {
 			}
 		}
 	}
+	// Unmarshal preferred package manager
+	var preferredPM string
+	if pm := v.Get("preferred_package_manager"); pm != nil {
+		if pmStr, ok := pm.(string); ok {
+			preferredPM = pmStr
+		}
+	}
+	localConfig.PackageManager = preferredPM
 
 	// Combine into final config
 	localConfig.Dependencies = dependencies
@@ -417,18 +439,18 @@ func SetTempConfig(p string) {
 		if authMap, ok := authData.(map[string]any); ok {
 			for key, value := range authMap {
 				switch key {
-				case "username":
-					if username, ok := value.(string); ok {
-						auth.Username = username
-					}
-				case "email":
-					if email, ok := value.(string); ok {
-						auth.Email = email
-					}
 				case "ssh_file":
 					if sshFile, ok := value.(string); ok {
 						auth.SSHFile = sshFile
 					}
+					// Unmarshal preferred package manager
+					var preferredPM string
+					if pm := v.Get("preferred_package_manager"); pm != nil {
+						if pmStr, ok := pm.(string); ok {
+							preferredPM = pmStr
+						}
+					}
+					localConfig.PackageManager = preferredPM
 				case "ssh_key_passphrase":
 					if passphrase, ok := value.(string); ok {
 						auth.SSHKeyPassphrase = passphrase

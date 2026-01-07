@@ -9,7 +9,7 @@ import (
 
 var errs []error
 
-func InstallDependenciesLinux() error {
+func InstallDependenciesLinux(pm string) error {
 	LOGGER = Log.GetLogger()
 	Config.SetConfig()
 	config := Config.GetConfig()
@@ -19,12 +19,6 @@ func InstallDependenciesLinux() error {
 			LOGGER.Error(err)
 		}
 		return errors.New("Invalid config file")
-	}
-
-	package_manager, err := CheckPackageManager()
-	if err != nil {
-		LOGGER.Errorf("Error getting package manager: %s", err)
-		return err
 	}
 
 	// fmt.Println("Please enter your password to install dependencies...")
@@ -43,7 +37,7 @@ func InstallDependenciesLinux() error {
 		if err != nil {
 			LOGGER.Error(err)
 		}
-		e := InstallDependency(d, package_manager)
+		e := InstallDependency(d, pm)
 		if e != nil {
 			errs = append(errs, e...)
 		}
