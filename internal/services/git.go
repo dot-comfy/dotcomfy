@@ -80,6 +80,10 @@ func Clone(url, branch, commit_hash, path string) error {
 		}
 	}
 
+	// NOTE: This uses a raw Git command to clone the repo with SSH instead of
+	//		 `git-go` because that module has quirks with using SSH keys for
+	//		 auth.
+
 	// Prepare git clone command arguments
 	var cloneArgs []string
 	cloneArgs = append(cloneArgs, "clone")
