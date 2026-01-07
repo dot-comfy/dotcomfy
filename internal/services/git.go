@@ -186,12 +186,19 @@ func Pull(repo_path string) error {
 		}
 	}
 
-	// Prepare environment for git command with SSH authentication
+	// Check if this repository uses SSH or HTTP
+	is_ssh_repo := detectSSHRepository(repo_path)
+
+	// Prepare environment for git command with SSH authentication (only for SSH repos)
 	env := os.Environ()
-	if ssh_key_path != "" {
+	if is_ssh_repo && ssh_key_path != "" {
 		sshCmd := fmt.Sprintf("ssh -i %s -o IdentitiesOnly=yes -o StrictHostKeyChecking=no", ssh_key_path)
 		env = append(env, fmt.Sprintf("GIT_SSH_COMMAND=%s", sshCmd))
 		LOGGER.Infof("Using SSH authentication with key: %s", ssh_key_path)
+	} else if is_ssh_repo {
+		LOGGER.Warn("SSH repository detected but no SSH key configured")
+	} else {
+		LOGGER.Info("Using HTTP authentication (no SSH configuration needed)")
 	}
 
 	// Execute git pull command
@@ -211,6 +218,26 @@ func Pull(repo_path string) error {
 	LOGGER.Debugf("Git output: %s", string(output))
 
 	return nil
+}
+
+// detectSSHRepository checks if a repository uses SSH or HTTP based on its remote URL
+func detectSSHRepository(repo_path string) bool {
+	logger := Log.GetLogger()
+
+	cmd := exec.Command("git", "remote", "get-url", "origin")
+	cmd.Dir = repo_path
+
+	output, err := cmd.Output()
+	if err != nil {
+		// If we can't determine the remote URL, default to HTTP
+		logger.Debugf("Could not determine repository remote URL, defaulting to HTTP")
+		return false
+	}
+
+	url := strings.TrimSpace(string(output))
+	isSSH := strings.HasPrefix(url, "git@") || strings.HasPrefix(url, "ssh://")
+	logger.Debugf("Repository remote URL: %s (SSH: %v)", url, isSSH)
+	return isSSH
 }
 
 func Push(repo_path string) error {
@@ -234,12 +261,19 @@ func Push(repo_path string) error {
 		}
 	}
 
-	// Prepare environment for git command with SSH authentication
+	// Check if this repository uses SSH or HTTP
+	is_ssh_repo := detectSSHRepository(repo_path)
+
+	// Prepare environment for git command with SSH authentication (only for SSH repos)
 	env := os.Environ()
-	if ssh_key_path != "" {
+	if is_ssh_repo && ssh_key_path != "" {
 		sshCmd := fmt.Sprintf("ssh -i %s -o IdentitiesOnly=yes -o StrictHostKeyChecking=no", ssh_key_path)
 		env = append(env, fmt.Sprintf("GIT_SSH_COMMAND=%s", sshCmd))
 		LOGGER.Infof("Using SSH authentication with key: %s", ssh_key_path)
+	} else if is_ssh_repo {
+		LOGGER.Warn("SSH repository detected but no SSH key configured")
+	} else {
+		LOGGER.Info("Using HTTP authentication (no SSH configuration needed)")
 	}
 
 	// Execute git add to stage all changes
