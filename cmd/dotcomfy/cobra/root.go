@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/viper"
 	"os"
 
-	Config "dotcomfy/internal/config"
 	Log "dotcomfy/internal/logger"
 )
 
@@ -59,5 +58,4 @@ func initConfig() {
 		CFG_FILE = cfg + "/dotcomfy/config.toml"
 	}
 	Log.Init(VERBOSITY)
-	Config.SetConfig()
 }

@@ -85,6 +85,9 @@ func run(cmd *cobra.Command, args []string) {
 			LOGGER.Error(err)
 			os.Exit(1)
 		}
+
+		// Load config from cloned repo
+		Config.SetConfig(dotcomfy_dir + "/dotcomfy")
 	} else {
 		url := fmt.Sprintf("https://github.com/%s/dotfiles.git", args[0])
 		temp_config_path, err := services.DownloadConfigFile(url, BRANCH)
@@ -110,6 +113,9 @@ func run(cmd *cobra.Command, args []string) {
 		if err != nil {
 			LOGGER.Fatal(err)
 		}
+
+		// Load config from cloned repo
+		Config.SetConfig(dotcomfy_dir + "/dotcomfy")
 	}
 
 	// Walk through the cloned repo and perform rename/symlink operations
