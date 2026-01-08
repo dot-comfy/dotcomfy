@@ -239,18 +239,29 @@ func isValidPackageManager(pm string) bool {
 
 var config *Config
 
-func SetConfig() {
+func SetConfig(path string) {
 	LOGGER := Log.GetLogger()
-	cfg, err := os.UserHomeDir()
 
 	// Create a new Viper instance to avoid any global state issues
 	v := viper.New()
-	v.AddConfigPath(cfg + "/.config/dotcomfy/") // Config file lives in $HOME/.config/dotcomfy/
+	if path != "" {
+		v.AddConfigPath(path)
+	} else {
+		cfg, err := os.UserHomeDir()
+		if err != nil {
+			LOGGER.Error("Failed to get user home dir:", err)
+			return
+		}
+		v.AddConfigPath(cfg + "/.config/dotcomfy/")
+	}
 	v.SetConfigName("config.yaml")
 	v.SetConfigType("yaml")
-	err = v.ReadInConfig()
+	err := v.ReadInConfig()
 	if err != nil {
-		LOGGER.Error(err)
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if !errors.As(err, &configFileNotFoundError) {
+			LOGGER.Error(err)
+		}
 	}
 
 	localConfig := &Config{}
@@ -370,7 +381,10 @@ func SetTempConfig(p string) {
 	v.SetConfigType("yaml")
 	err := v.ReadInConfig()
 	if err != nil {
-		LOGGER.Error(err)
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if !errors.As(err, &configFileNotFoundError) {
+			LOGGER.Error(err)
+		}
 	}
 
 	localConfig := &Config{}

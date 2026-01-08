@@ -11,7 +11,7 @@ var errs []error
 
 func InstallDependenciesLinux(pm string) error {
 	LOGGER = Log.GetLogger()
-	Config.SetConfig()
+	Config.SetConfig("")
 	config := Config.GetConfig()
 	errs := config.Validate()
 	if len(errs) > 0 {

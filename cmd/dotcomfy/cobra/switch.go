@@ -105,6 +105,9 @@ func switchDotfiles(dotcomfy_dir, old_dotfiles_dir, url, branch string) error {
 		return err
 	}
 
+	// Load config from cloned repo
+	Config.SetConfig(dotcomfy_dir + "/dotcomfy")
+
 	// Walk through the cloned repo and perform rename/symlink operations
 	err = filepath.WalkDir(dotcomfy_dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
