@@ -202,7 +202,7 @@ func (d *Dependency) GetVersion() string {
 }
 
 func (d *Dependency) SetInstalled() {
-	Log.GetLogger().Info("Setting dependency \"" + d.Name + "\" as installed...")
+	Log.GetLogger().Debug("Setting dependency \"" + d.Name + "\" as installed...")
 	c := GetConfig()
 	if dependency, ok := c.Dependencies[d.Name]; ok {
 		dependency.Installed = true
@@ -215,7 +215,7 @@ func (d *Dependency) GetInstalled() bool {
 }
 
 func (d *Dependency) SetFailedInstall() {
-	Log.GetLogger().Info("Setting dependency \"" + d.Name + "\" as failed install...")
+	Log.GetLogger().Debug("Setting dependency \"" + d.Name + "\" as failed install...")
 	c := GetConfig()
 	if dependency, ok := c.Dependencies[d.Name]; ok {
 		dependency.FailedInstall = true
@@ -244,16 +244,7 @@ func SetConfig(path string) {
 
 	// Create a new Viper instance to avoid any global state issues
 	v := viper.New()
-	if path != "" {
-		v.AddConfigPath(path)
-	} else {
-		cfg, err := os.UserHomeDir()
-		if err != nil {
-			LOGGER.Error("Failed to get user home dir:", err)
-			return
-		}
-		v.AddConfigPath(cfg + "/.config/dotcomfy/")
-	}
+	v.AddConfigPath(path)
 	v.SetConfigName("config.yaml")
 	v.SetConfigType("yaml")
 	err := v.ReadInConfig()
@@ -267,8 +258,8 @@ func SetConfig(path string) {
 	localConfig := &Config{}
 
 	// Debug what this fresh Viper instance read
-	LOGGER.Info("Fresh Viper all settings:", v.AllSettings())
-	LOGGER.Info("Fresh Viper auth:", v.Get("authentication"))
+	LOGGER.Debug("Fresh Viper all settings:", v.AllSettings())
+	LOGGER.Debug("Fresh Viper auth:", v.Get("authentication"))
 
 	// Unmarshal dependencies first
 	var dependencies map[string]Dependency
@@ -363,7 +354,7 @@ func SetConfig(path string) {
 	localConfig.Dependencies = dependencies
 	localConfig.Auth = auth
 
-	LOGGER.Info("Config after manual unmarshal:", localConfig)
+	LOGGER.Debug("Config after manual unmarshal:", localConfig)
 
 	// Update global config
 	config = localConfig
@@ -390,8 +381,8 @@ func SetTempConfig(p string) {
 	localConfig := &Config{}
 
 	// Debug what this fresh Viper instance read
-	LOGGER.Info("Fresh Viper all settings:", v.AllSettings())
-	LOGGER.Info("Fresh Viper auth:", v.Get("authentication"))
+	LOGGER.Debug("Fresh Viper all settings:", v.AllSettings())
+	LOGGER.Debug("Fresh Viper auth:", v.Get("authentication"))
 
 	// Unmarshal dependencies first
 	var dependencies map[string]Dependency
@@ -478,7 +469,7 @@ func SetTempConfig(p string) {
 	localConfig.Dependencies = dependencies
 	localConfig.Auth = auth
 
-	LOGGER.Info("Config after manual unmarshal:", localConfig)
+	LOGGER.Debug("Config after manual unmarshal:", localConfig)
 
 	// Update global config
 	config = localConfig

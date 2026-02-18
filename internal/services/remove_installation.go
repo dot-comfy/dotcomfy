@@ -55,7 +55,7 @@ func RemoveInstallation(dotcomfy_dir, old_dotfiles_dir string) (err error) {
 				if !not_empty {
 					err = os.RemoveAll(old_path)
 					if err != nil {
-						LOGGER.Info(err)
+						LOGGER.Error(err)
 					}
 				}
 			}

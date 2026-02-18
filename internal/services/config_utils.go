@@ -39,7 +39,7 @@ func DownloadConfigFile(repo_url, branch string) (string, error) {
 
 	temp_dir_path, err := os.MkdirTemp(base_temp_dir, "config-")
 	if err != nil {
-		LOGGER.Infof("Error creating temp directory: %v", err)
+		LOGGER.Warnf("Error creating temp directory: %v", err)
 		// Continue with fallback directory
 		temp_dir_path = base_temp_dir
 		os.MkdirAll(temp_dir_path, 0755)
@@ -51,20 +51,19 @@ func DownloadConfigFile(repo_url, branch string) (string, error) {
 		Src:  raw_url,
 		Mode: getter.ClientModeFile,
 	}
-	LOGGER.Infof("Config file URL path: %v", raw_url)
+	LOGGER.Debugf("Config file URL path: %v", raw_url)
 	err = client.Get()
 	if err != nil {
-		LOGGER.Infof("Error getting config file from repo: %v", err)
+		fmt.Printf("Error getting config file from repo: %v\n", err)
+		LOGGER.Errorf("Error getting config file from repo: %v", err)
 		return "", err
 	}
 
 	// Verify file was downloaded successfully
 	_, err = os.ReadFile(temp_dir_path + "/config.yaml")
 	if err != nil {
+		fmt.Printf("Downloaded config file is not readable: %v\n", err)
 		LOGGER.Errorf("Downloaded config file is not readable: %v", err)
-	} else {
-		LOGGER.Infof("Config file downloaded successfully to: %s/config.yaml", temp_dir_path)
 	}
-
 	return temp_dir_path, nil
 }

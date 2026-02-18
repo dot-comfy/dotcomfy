@@ -138,7 +138,7 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 	needs = d.Needs
 	if needs != nil {
 		for _, need := range needs {
-			LOGGER.Info("Need dependency \"" + need + "\" to install \"" + d.Name + "\"...")
+			fmt.Printf("Need dependency \"%s\" to install \"%s\"...\n", need, d.Name)
 			n, error := Config.GetDependency(need)
 			if error != nil {
 				fmt.Println(error)
@@ -164,7 +164,7 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 	}
 
 	if d.Installed {
-		LOGGER.Info("Dependency \"" + d.Name + "\" already installed, skipping...")
+		fmt.Printf("Dependency \"%s\" already installed, skipping...\n", d.Name)
 		return errs
 	} else if d.GetFailedInstall() {
 		err := errors.New("Dependency \"" + d.Name + "\" previously failed to install, skipping...")
@@ -177,14 +177,14 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 			err := InstallPackage(pm, d.Name, "")
 			if err != nil {
 				d.SetFailedInstall()
-				fmt.Println("Dependency \"" + d.Name + "\" failed to install from package manager...")
+				fmt.Printf("Dependency \"%s\" failed to install from package manager...\n", d.Name)
 				errs = append(errs, err)
 			}
 		} else {
 			err := InstallPackage(pm, d.Name, d.Version)
 			if err != nil {
 				d.SetFailedInstall()
-				fmt.Println("Dependency \"" + d.Name + "\" failed to install from package manager...")
+				fmt.Printf("Dependency \"%s\" failed to install from package manager...\n", d.Name)
 				errs = append(errs, err)
 			}
 		}
@@ -192,7 +192,7 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 			err := HandleSteps(d.PostInstallSteps)
 			if err != nil {
 				d.SetFailedInstall()
-				fmt.Println("Dependency \"" + d.Name + "\" failed during the post install steps...")
+				fmt.Printf("Dependency \"%s\" failed during the post install steps...\n", d.Name)
 				errs = append(errs, err)
 				return errs
 			}
@@ -200,21 +200,19 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 			err := HandleScript(d.PostInstallScript)
 			if err != nil {
 				d.SetFailedInstall()
-				fmt.Println("Dependency \"" + d.Name + "\" failed during the install steps...")
-				LOGGER.Error("Dependency \"" + d.Name + "\" failed during the install steps...")
+				fmt.Printf("Dependency \"%s\" failed during the install steps...\n", d.Name)
 				errs = append(errs, err)
 				return errs
 			}
 		}
 		d.SetInstalled()
 	} else {
-		fmt.Println("Installing dependency \"" + d.Name + "\"...")
+		fmt.Printf("Installing dependency \"%s\"...\n", d.Name)
 		if d.Steps != nil {
 			err := HandleSteps(d.Steps)
 			if err != nil {
 				d.SetFailedInstall()
-				fmt.Println("Dependency \"" + d.Name + "\" failed during the install steps...")
-				LOGGER.Error("Dependency \"" + d.Name + "\" failed during the install steps...")
+				fmt.Printf("Dependency \"%s\" failed during the install steps...\n", d.Name)
 				errs = append(errs, err)
 				return errs
 			}
@@ -222,8 +220,7 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 			err := HandleScript(d.Script)
 			if err != nil {
 				d.SetFailedInstall()
-				fmt.Println("Dependency \"" + d.Name + "\" failed during the install steps...")
-				LOGGER.Error("Dependency \"" + d.Name + "\" failed during the install steps...")
+				fmt.Printf("Dependency \"%s\" failed during the install steps...\n", d.Name)
 				errs = append(errs, err)
 				return errs
 			}
@@ -236,8 +233,7 @@ func InstallDependency(d *Config.Dependency, pm string) []error {
 func InstallPackage(pm string, pkg string, version string) error {
 	LOGGER = Log.GetLogger()
 
-	fmt.Println("Installing package \"" + pkg + "\" from package manager " + pm + " ...")
-	LOGGER.Info("Installing package \"" + pkg + "\" from package manager " + pm + " ...")
+	fmt.Printf("Installing package \"%s\" from package manager %s ...\n", pkg, pm)
 
 	switch pm {
 	case "apt":
@@ -300,8 +296,9 @@ func HandleSteps(steps []string) error {
 		cmd := exec.Command("/bin/sh", "-c", step)
 		output, err := cmd.CombinedOutput()
 		// fmt.Println(string(output))
-		LOGGER.Info(string(output))
+		LOGGER.Debug(string(output))
 		if err != nil {
+			fmt.Printf("Command execution failed: %v\n", err)
 			LOGGER.Error(err)
 			return err
 		}
@@ -315,6 +312,7 @@ func HandleScript(file_name string) error {
 
 	err := os.Chmod(XDG_CONFIG_HOME+"/dotcomfy/"+file_name, 0755)
 	if err != nil {
+		fmt.Printf("Error making script \"%s\" executable: %v\n", file_name, err)
 		LOGGER.Error("Error making script \""+file_name+"\" executable:", err)
 		return err
 	}
@@ -322,6 +320,7 @@ func HandleScript(file_name string) error {
 	cmd := exec.Command(XDG_CONFIG_HOME + "/dotcomfy/" + file_name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		fmt.Printf("Error executing script \"%s\": %v\n", file_name, err)
 		LOGGER.Error("Error executing script \""+file_name+"\":", err)
 		return err
 	}

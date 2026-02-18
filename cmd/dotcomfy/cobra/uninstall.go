@@ -24,13 +24,11 @@ var uninstallCmd = &cobra.Command{
 		LOGGER = Log.GetLogger()
 		var confirmation string
 		if !CONFIRM {
-			LOGGER.Info("Are you sure you want to uninstall the current dotcomfy installation? (y/n)")
-			fmt.Print("Are you sure you want to uninstall the current dotcomfy installation? (y/n) ")
+			fmt.Print("Are you sure you want to uninstall the current dotcomfy installation? (y/N) ")
 			fmt.Scan(&confirmation)
-			LOGGER.Infof("Confirmation: %s", confirmation)
+			LOGGER.Debugf("Confirmation: %s", confirmation)
 
 			if confirmation != "y" {
-				LOGGER.Info("Aborting")
 				fmt.Println("Aborting")
 				os.Exit(0)
 			}
